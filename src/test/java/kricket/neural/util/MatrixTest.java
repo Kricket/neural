@@ -214,4 +214,19 @@ public class MatrixTest {
 			}
 		}
 	}
+	
+	@Test
+	public void plusEqualsSubMatrix() {
+		Matrix id5 = id(5);
+		Matrix three2 = id(2).timesEquals(3);
+		
+		for(int r=0; r<3; r++) {
+			int c = r;
+			Matrix id2 = id(2);
+			id2.plusEqualsSubMatrix(id5, r, c, 2);
+			assertEquals("Submatrix at row " + r + ", col " + c,
+					three2,
+					id2);
+		}
+	}
 }

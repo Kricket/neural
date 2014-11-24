@@ -35,20 +35,7 @@ public class Image implements Datum {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		for(int r=0; r<WIDTH; r++) {
-			for(int c=0; c<HEIGHT; c++) {
-				double value = data.at(r,c);
-				if(value > 0.75)
-					sb.append("@");
-				else if(value > 0.5)
-					sb.append("o");
-				else if(value > 0.25)
-					sb.append(".");
-				else
-					sb.append(" ");
-			}
-			sb.append("\n");
-		}
+		sb.append(data.draw());
 		
 		for(int i=0; i<answer.data.length; i++) {
 			sb.append((int) answer.data[i]);

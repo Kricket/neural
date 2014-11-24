@@ -7,19 +7,22 @@ import kricket.neural.util.Matrix;
 public class ConvolutionalLayer extends Layer {
 	
 	private final Matrix[] kernels;
-	private final double[] biases;
+	private final Matrix biases;
 	private final int skipCols, skipRows;
 	private Matrix[] lastActivation, lastZ;
+	private Matrix[] nabla_Ck;
+	private Matrix nabla_Cb;
 	
 	public ConvolutionalLayer(int numKernels, int kernelWidth, int kernelHeight, int skipColmuns, int skipRows) {
 		kernels = new Matrix[numKernels];
-		biases = new double[numKernels];
+		biases = Matrix.random(numKernels, 1);
 		for(int i=0; i<numKernels; i++) {
 			kernels[i] = Matrix.random(kernelHeight, kernelWidth);
-			biases[i] = Math.random() - Math.random();
 		}
 		this.skipCols = skipColmuns;
 		this.skipRows = skipRows;
+		
+		nabla_Ck = new Matrix[numKernels];
 	}
 
 	@Override
@@ -48,7 +51,7 @@ public class ConvolutionalLayer extends Layer {
 			for(int k=0; k<kernels.length; k++) {
 				Matrix outMap = lastZ[resultIndex++] = new Matrix(rows, cols);
 				for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
-					outMap.set(r, c, inputMap.subMatrixDot(r*skipRows, c*skipCols, kernels[k]) + biases[k]);
+					outMap.set(r, c, inputMap.subMatrixDot(r*skipRows, c*skipCols, kernels[k]) + biases.data[k]);
 				}
 			}
 		}
@@ -71,6 +74,32 @@ public class ConvolutionalLayer extends Layer {
 
 	@Override
 	public void calcGradients(Matrix[] prevActivations, Matrix[] deltas) {
+		// We should have 1 delta Matrix for each output feature map.
+		if(deltas.length != prevActivations.length * kernels.length)
+			throw new IllegalArgumentException("WTF? We have " + deltas.length + " deltas (output feature maps), "
+					+ kernels.length + " kernels, and " + prevActivations.length + " previous feature maps!");
+		
+		for(int m = 0; m < prevActivations.length; m++) {
+			for(int k=0; k<kernels.length; k++) {
+				// deltas[m * k] = delta for the map built with kernel k and input map m
+				Matrix delta = unflatten(deltas[m*k], prevActivations[m]);
+				for(int dr=0; dr<delta.rows; dr++) {
+					for(int dc=0; dc<delta.cols; dc++) {
+						nabla_Cb.data[k] += delta.at(dr, dc);
+						nabla_Ck[k].plusEqualsSubMatrix(prevActivations[m], dr*skipRows, dc*skipCols, delta.at(dr, dc));
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Inverse of the "flatten" operation in a FullyConnectedLayer.
+	 * @param delta
+	 * @return
+	 */
+	private Matrix unflatten(Matrix delta, Matrix input) {
+		return new Matrix(getOutputRows(input.rows), getOutputColumns(input.cols), delta.data);
 	}
 
 	@Override
@@ -85,10 +114,21 @@ public class ConvolutionalLayer extends Layer {
 
 	@Override
 	public void applyGradients(double regTerm, double eta, int batchSize) {
+		double factor = -eta / batchSize;
+		biases.plusEquals(nabla_Cb.timesEquals(factor));
+		
+		for(int k=0; k<kernels.length; k++) {
+			if(regTerm != 0)
+				kernels[k].timesEquals(regTerm);
+			kernels[k].plusEquals(nabla_Ck[k].timesEquals(factor));
+		}
 	}
 
 	@Override
 	public void resetGradients() {
+		nabla_Cb = new Matrix(biases.rows, biases.cols);
+		for(int i=0; i<nabla_Ck.length; i++)
+			nabla_Ck[i] = new Matrix(kernels[i].rows, kernels[i].cols);
 	}
 	
 	public String toString() {

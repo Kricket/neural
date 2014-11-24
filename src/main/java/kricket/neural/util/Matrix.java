@@ -320,4 +320,50 @@ public class Matrix {
 		}
 		return result;
 	}
+
+	/**
+	 * Add a submatrix of m (scaled by the given factor) to this.
+	 * @param m
+	 * @param startRow
+	 * @param startCol
+	 * @param factor
+	 */
+	public void plusEqualsSubMatrix(Matrix m, int startRow, int startCol, double factor) {
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
+			data[r*cols+c] += m.at(r+startRow, c+startCol) * factor;
+		}
+	}
+	
+	public String draw() {
+		double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
+			double d = at(r,c);
+			if(d < min)
+				min = d;
+			if(d > max)
+				max = d;
+		}
+
+		double diff = (max-min)/4;
+		double x = min + diff;
+		double y = x + diff;
+		double z = y + diff;
+		
+		StringBuilder sb = new StringBuilder();
+		for(int r=0; r<rows; r++) {
+			for(int c=0; c<cols; c++) {
+				double value = at(r,c);
+				if(value > z)
+					sb.append("@");
+				else if(value > y)
+					sb.append("o");
+				else if(value > x)
+					sb.append(".");
+				else
+					sb.append(" ");
+			}
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
 }
