@@ -24,7 +24,7 @@ public class ConvolutionalLayer extends Layer {
 		
 		nabla_Ck = new Matrix[numKernels];
 	}
-
+	
 	@Override
 	public Dimension getOutputDimension(Dimension inputDimension) throws IncompatibleLayerException {
 		int rows = getOutputRows(inputDimension.rows), cols = getOutputColumns(inputDimension.columns);
@@ -33,11 +33,23 @@ public class ConvolutionalLayer extends Layer {
 		return new Dimension(rows, cols, inputDimension.depth * kernels.length);
 	}
 	
-	private int getOutputRows(int inputRows) {
+	/**
+	 * Get the number of rows in an output feature map, if the input feature map has
+	 * the given number of rows.
+	 * @param inputRows
+	 * @return
+	 */
+	public int getOutputRows(int inputRows) {
 		return (inputRows - kernels[0].rows) / skipRows + 1;
 	}
 	
-	private int getOutputColumns(int inputCols) {
+	/**
+	 * Get the number of columns in an output feature map, if the input feature map has
+	 * the given number of columns.
+	 * @param inputCols
+	 * @return
+	 */
+	public int getOutputColumns(int inputCols) {
 		return (inputCols - kernels[0].cols) / skipCols + 1;
 	}
 
@@ -75,6 +87,8 @@ public class ConvolutionalLayer extends Layer {
 	@Override
 	public void calcGradients(Matrix[] prevActivations, Matrix[] deltas) {
 		// We should have 1 delta Matrix for each output feature map.
+		deltas = unflatten(deltas, prevActivations);
+		
 		if(deltas.length != prevActivations.length * kernels.length)
 			throw new IllegalArgumentException("WTF? We have " + deltas.length + " deltas (output feature maps), "
 					+ kernels.length + " kernels, and " + prevActivations.length + " previous feature maps!");
@@ -82,7 +96,7 @@ public class ConvolutionalLayer extends Layer {
 		for(int m = 0; m < prevActivations.length; m++) {
 			for(int k=0; k<kernels.length; k++) {
 				// deltas[m * k] = delta for the map built with kernel k and input map m
-				Matrix delta = unflatten(deltas[m*k], prevActivations[m]);
+				Matrix delta = deltas[m*k];
 				for(int dr=0; dr<delta.rows; dr++) {
 					for(int dc=0; dc<delta.cols; dc++) {
 						nabla_Cb.data[k] += delta.at(dr, dc);
@@ -94,14 +108,39 @@ public class ConvolutionalLayer extends Layer {
 	}
 
 	/**
-	 * Inverse of the "flatten" operation in a FullyConnectedLayer.
-	 * @param delta
+	 * Inverse of the "flatten" operation. I.e.: in case we happened to receive a single column vector
+	 * as our "deltas", we need to explode it into the correct array of deltas of each output feature map.
+	 * @param deltas
+	 * @param inputs
 	 * @return
 	 */
-	private Matrix unflatten(Matrix delta, Matrix input) {
-		return new Matrix(getOutputRows(input.rows), getOutputColumns(input.cols), delta.data);
+	public Matrix[] unflatten(Matrix[] deltas, Matrix[] inputs) {
+		if(deltas.length > 1) {
+			if(deltas.length != inputs.length * kernels.length)
+				throw new IllegalArgumentException("Unable to unflatten " + deltas.length
+						+ " deltas, when there are " + inputs.length + " input maps and "
+						+ kernels.length + " kernels");
+			return deltas;
+		}
+		
+		Matrix[] result = new Matrix[inputs.length * kernels.length];
+		int offset = 0;
+		
+		for(int i=0; i<inputs.length; i++) {
+			int outputRows = getOutputRows(inputs[i].rows),
+					outputColumns = getOutputColumns(inputs[i].cols);
+			
+			for(int k=0; k<kernels.length; k++) {
+				double[] delta_ik = new double[outputRows * outputColumns];
+				System.arraycopy(deltas[0].data, offset, delta_ik, 0, delta_ik.length);
+				result[i*kernels.length + k] = new Matrix(outputRows, outputColumns, delta_ik);
+				offset += delta_ik.length;
+			}
+		}
+		
+		return result;
 	}
-
+	
 	@Override
 	public Matrix[] lastActivation() {
 		return lastActivation;
@@ -132,8 +171,19 @@ public class ConvolutionalLayer extends Layer {
 	}
 	
 	public String toString() {
-		return getClass().getSimpleName()
-				+ kernels.length + " kernels (r=" + kernels[0].rows + ", c=" + kernels[0].cols
-				+ ") skip (r=" + skipRows + ", c=" + skipCols + ")";
+		StringBuilder sb = new StringBuilder();
+		sb.append(getClass().getSimpleName());
+		sb.append("\n");
+		for(int k=0; k<kernels.length; k++) {
+			sb.append("Kernel ");
+			sb.append(k);
+			sb.append("\n");
+			sb.append(kernels[k].draw());
+		}
+		sb.append("skip rows=");
+		sb.append(skipRows);
+		sb.append(" cols=");
+		sb.append(skipCols);
+		return sb.toString();
 	}
 }

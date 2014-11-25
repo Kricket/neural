@@ -5,6 +5,9 @@ import java.util.List;
 
 import kricket.neural.mnist.Image;
 import kricket.neural.mnist.Loader;
+import kricket.neural.util.Dimension;
+import kricket.neural.util.IncompatibleLayerException;
+import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
 
 import org.junit.After;
@@ -44,6 +47,7 @@ public class CNNPlayground {
 		cnn.calc_error(trainingImages);
 		cnn.getOptions().log.info("Test images:");
 		cnn.calc_error(testImages);
+		System.out.println(cnn);
 	}
 	
 	//@Test
@@ -55,10 +59,24 @@ public class CNNPlayground {
 	}
 
 	@Test
-	public void conv() {
-		CNN cnn = new CNN(getOpts(), new ConvolutionalLayer(1, 3, 3, 2, 2), new FullyConnectedLayer(169, 30), new FullyConnectedLayer(30, 10));
-		cnn.SGD(trainingImages, 10, 10, 0.5, 5);
+	public void conv() throws IncompatibleLayerException {
+		final int KERNELS = 4;
+		ConvolutionalLayer cLayer = new ConvolutionalLayer(KERNELS, 3, 3, 2, 2);
+		final int MAP_SIZE = cLayer.getOutputRows(Image.HEIGHT) * cLayer.getOutputColumns(Image.WIDTH);
 		
-		totals(cnn);
+		CNN cnn = new CNN(getOpts(), cLayer, new FullyConnectedLayer(MAP_SIZE*KERNELS, 30), new FullyConnectedLayer(30, 10));
+		cnn.checkDimensionality(new Dimension(Image.HEIGHT, Image.WIDTH, 1), new Dimension(10, 1, 1));
+		cnn.SGD(trainingImages, 10, 5, 0.5, 5);
+		
+		//totals(cnn);
+		for(int i=0; i<5; i++) {
+			Image img = trainingImages.get(i);
+			System.out.println(img);
+			Matrix[] result = cLayer.feedForward(new Matrix[] {img.getData()});
+			for(int j=0; j<result.length; j++) {
+				System.out.println("Map " + j);
+				System.out.print(result[j].draw());
+			}
+		}
 	}
 }

@@ -25,8 +25,14 @@ public class CNN extends NNBase {
 		this.layers = layers;
 	}
 	
-	public NNOptions getOptions() {
-		return options;
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		for(Layer l:layers) {
+			sb.append(l);
+			sb.append("\n");
+		}
+		return sb.toString();
 	}
 	
 	/**

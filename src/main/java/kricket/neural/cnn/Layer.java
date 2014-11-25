@@ -96,4 +96,22 @@ public abstract class Layer {
 			m.data[i] = dSigma(m.data[i]);
 		return m;
 	}
+	
+	/**
+	 * Flatten the given list of matrices into a single column vector.
+	 * @param m
+	 * @return
+	 */
+	public static Matrix flatten(Matrix[] m) {
+		if(m.length == 1)
+			return new Matrix(m[0].data);
+		
+		int matrixDataLength = m[0].data.length;
+		int totalSize = m.length * matrixDataLength;
+		double[] flatData = new double[totalSize];
+		for(int mi=0; mi<m.length; mi++) {
+			System.arraycopy(m[mi].data, 0, flatData, matrixDataLength*mi, matrixDataLength);
+		}
+		return new Matrix(flatData);
+	}
 }

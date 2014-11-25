@@ -20,15 +20,12 @@ public class FullyConnectedLayer extends Layer {
 		lastActivation = new Matrix[1];
 	}
 	
-	private Matrix flatten(Matrix[] m) {
-		return new Matrix(m[0].data);
-	}
-
 	@Override
 	public Matrix[] feedForward(Matrix[] featureMaps) {
+		/*
 		if(featureMaps.length != 1)
 			throw new IllegalArgumentException(featureMaps.length+" feature maps were given.");
-		
+		*/
 		lastZ[0] = weights.times(flatten(featureMaps)).plusEquals(biases);
 		lastActivation[0] = sigma(lastZ[0].copy());
 		
@@ -37,9 +34,10 @@ public class FullyConnectedLayer extends Layer {
 	
 	@Override
 	public void calcGradients(Matrix[] prevActivations, Matrix[] deltas) {
+		/*
 		if(deltas.length != 1 || prevActivations.length != 1)
 			throw new IllegalArgumentException("WTF? We have "+deltas.length+" deltas and "+prevActivations.length+" previous activations!");
-		
+		*/
 		nabla_Cb.plusEquals(deltas[0]);
 		nabla_Cw.plusEquals(deltas[0].timesTranspose(flatten(prevActivations)));
 	}
@@ -48,7 +46,7 @@ public class FullyConnectedLayer extends Layer {
 	public Matrix[] backprop(Matrix[] prevZ, Matrix[] deltas) {
 		Matrix backDelta = weights
 				.transposeTimes(deltas[0])
-				.dotTimesEquals(dSigma(prevZ[0]));
+				.dotTimesEquals(dSigma(flatten(prevZ)));
 		
 		return new Matrix[] {backDelta};
 	}
@@ -79,7 +77,8 @@ public class FullyConnectedLayer extends Layer {
 
 	@Override
 	public Dimension getOutputDimension(Dimension inputDimension) throws IncompatibleLayerException {
-		if(inputDimension.columns != 1 || inputDimension.depth != 1 || inputDimension.rows != weights.cols)
+		int flatInputSize = inputDimension.columns * inputDimension.rows * inputDimension.depth;
+		if(flatInputSize != weights.cols)
 			throw new IncompatibleLayerException(inputDimension, this);
 		return new Dimension(biases.rows, 1, 1);
 	}

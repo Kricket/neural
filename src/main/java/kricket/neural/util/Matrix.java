@@ -194,10 +194,10 @@ public class Matrix {
 	}
 	
 	public Matrix dotTimesEquals(Matrix m) {
-		/*
+		/**/
 		if(cols != m.cols || rows != m.rows)
 			throw new IllegalArgumentException("Incompatible dimensions: I am (" + rows + "," + cols + "), m is (" + m.rows + "," + m.cols + ")");
-		*/
+		/**/
 		for(int i=0; i<data.length; i++)
 			data[i] *= m.data[i];
 		
