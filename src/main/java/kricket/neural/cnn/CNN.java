@@ -71,6 +71,9 @@ public class CNN extends NNBase {
 	private void backprop(Matrix x, Matrix y) {
 		Matrix[] forward = feedForward(x);
 		Matrix[] delta = new Matrix[] {forward[0].minus(y)};
+		// This delta represents the cross-entropy cost function.
+		// To use quadratic cost, you must also do (for each delta and Z):
+		//   delta.dotTimesEquals(dSigma(lastLayer.lastZ()))
 		
 		for(int i=layers.length-1; i>0; i--) {
 			layers[i].calcGradients(layers[i-1].lastActivation(), delta);

@@ -38,7 +38,7 @@ public class Matrix {
 	 * Create a column vector from the given data.
 	 * @param col The column vector.
 	 */
-	public Matrix(double[] col) {
+	public Matrix(double ...col) {
 		this(col.length, 1, col);
 	}
 	
@@ -187,12 +187,22 @@ public class Matrix {
 		return sb.toString();
 	}
 
+	/**
+	 * Multiply this*d.
+	 * @param d
+	 * @return this
+	 */
 	public Matrix timesEquals(double d) {
 		for(int i=0; i<data.length; i++)
 			data[i] *= d;
 		return this;
 	}
 	
+	/**
+	 * Elementwise multiplication with the given Matrix.
+	 * @param m
+	 * @return this
+	 */
 	public Matrix dotTimesEquals(Matrix m) {
 		/**/
 		if(cols != m.cols || rows != m.rows)

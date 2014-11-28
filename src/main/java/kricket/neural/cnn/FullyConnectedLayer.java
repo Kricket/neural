@@ -6,12 +6,18 @@ import kricket.neural.util.Matrix;
 
 public class FullyConnectedLayer extends Layer {
 	
-	private final Matrix weights, biases;
+	/**
+	 * The weights and biases of this Layer.
+	 */
+	final Matrix weights, biases;
+	/**
+	 * Values that were calculated on the last feedforward pass.
+	 */
 	private final Matrix[] lastZ, lastActivation;
 	/**
 	 * Accumulated gradients, calculated during backpropagation.
 	 */
-	private Matrix nabla_Cw, nabla_Cb;
+	Matrix nabla_Cw, nabla_Cb;
 	
 	public FullyConnectedLayer(int inputLength, int outputLength) {
 		weights = Matrix.random(outputLength, inputLength);

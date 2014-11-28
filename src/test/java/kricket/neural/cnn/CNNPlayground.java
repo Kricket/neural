@@ -1,6 +1,7 @@
 package kricket.neural.cnn;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import kricket.neural.mnist.Image;
@@ -37,7 +38,7 @@ public class CNNPlayground {
 		opts.logDropout = true;
 		opts.logEpochs = true;
 		opts.logIncorrectAnswers = false;
-		opts.summarizeSGD = false;
+		opts.summarizeSGD = true;
 		return opts;
 	}
 	
@@ -51,7 +52,7 @@ public class CNNPlayground {
 	}
 	
 	//@Test
-	public void basic() {
+	public void equivalentToNN() {
 		CNN cnn = new CNN(getOpts(), new FullyConnectedLayer(IMGSIZE, 30), new FullyConnectedLayer(30, 10));
 		cnn.SGD(trainingImages, 10, 3, 0.5, 5);
 		
@@ -59,16 +60,32 @@ public class CNNPlayground {
 	}
 
 	@Test
-	public void conv() throws IncompatibleLayerException {
+	public void simpleConv() throws IncompatibleLayerException {
 		final int KERNELS = 4;
 		ConvolutionalLayer cLayer = new ConvolutionalLayer(KERNELS, 3, 3, 2, 2);
 		final int MAP_SIZE = cLayer.getOutputRows(Image.HEIGHT) * cLayer.getOutputColumns(Image.WIDTH);
 		
 		CNN cnn = new CNN(getOpts(), cLayer, new FullyConnectedLayer(MAP_SIZE*KERNELS, 30), new FullyConnectedLayer(30, 10));
 		cnn.checkDimensionality(new Dimension(Image.HEIGHT, Image.WIDTH, 1), new Dimension(10, 1, 1));
-		cnn.SGD(trainingImages, 10, 5, 0.5, 5);
 		
-		//totals(cnn);
+		System.out.println("Augmenting images...");
+		List<Image> augmentedTraining = new ArrayList<>(trainingImages);
+		/*
+		for(Image i : trainingImages) {
+			augmentedTraining.add(i.rotate(Math.PI/6));
+			
+			augmentedTraining.add(i.shift(-3, -3));
+			augmentedTraining.add(i.shift(3, -3));
+			augmentedTraining.add(i.shift(-3, 3));
+			augmentedTraining.add(i.shift(3, 3));
+			
+			augmentedTraining.add(i.rotate(-Math.PI/6));
+		}
+		System.gc();
+		*/
+		cnn.SGD(augmentedTraining, 10, 2, 0.5, 5);
+		
+		totals(cnn);
 		for(int i=0; i<5; i++) {
 			Image img = trainingImages.get(i);
 			System.out.println(img);
@@ -78,5 +95,7 @@ public class CNNPlayground {
 				System.out.print(result[j].draw());
 			}
 		}
+
+		System.out.println(cnn);
 	}
 }

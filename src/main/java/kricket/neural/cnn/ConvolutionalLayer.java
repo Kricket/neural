@@ -81,7 +81,7 @@ public class ConvolutionalLayer extends Layer {
 
 	@Override
 	public Matrix[] backprop(Matrix[] prevZ, Matrix[] deltas) {
-		return null;
+		throw new UnsupportedOperationException("TODO");
 	}
 
 	@Override
@@ -99,6 +99,8 @@ public class ConvolutionalLayer extends Layer {
 				Matrix delta = deltas[m*k];
 				for(int dr=0; dr<delta.rows; dr++) {
 					for(int dc=0; dc<delta.cols; dc++) {
+						// The values here should be reduced by the number of times the kernel is repeated (i.e., the
+						// size of delta). As an optimization, we do it in applyGradients, instead.
 						nabla_Cb.data[k] += delta.at(dr, dc);
 						nabla_Ck[k].plusEqualsSubMatrix(prevActivations[m], dr*skipRows, dc*skipCols, delta.at(dr, dc));
 					}
@@ -153,7 +155,8 @@ public class ConvolutionalLayer extends Layer {
 
 	@Override
 	public void applyGradients(double regTerm, double eta, int batchSize) {
-		double factor = -eta / batchSize;
+		int scaleDown = getOutputColumns(lastActivation[0].cols) * getOutputRows(lastActivation[0].rows);
+		double factor = -eta / (batchSize*scaleDown);
 		biases.plusEquals(nabla_Cb.timesEquals(factor));
 		
 		for(int k=0; k<kernels.length; k++) {
