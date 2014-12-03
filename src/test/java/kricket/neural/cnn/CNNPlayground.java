@@ -53,7 +53,11 @@ public class CNNPlayground {
 	
 	//@Test
 	public void equivalentToNN() {
-		CNN cnn = new CNN(getOpts(), new FullyConnectedLayer(IMGSIZE, 30), new FullyConnectedLayer(30, 10));
+		CNN cnn = new CNN(getOpts(),
+				new FlatteningLayer(),
+				new FullyConnectedLayer(IMGSIZE, 30),
+				new SigmaLayer(),
+				new FullyConnectedLayer(30, 10));
 		cnn.SGD(trainingImages, 10, 3, 0.5, 5);
 		
 		totals(cnn);
@@ -65,12 +69,17 @@ public class CNNPlayground {
 		ConvolutionalLayer cLayer = new ConvolutionalLayer(KERNELS, 3, 3, 2, 2);
 		final int MAP_SIZE = cLayer.getOutputRows(Image.HEIGHT) * cLayer.getOutputColumns(Image.WIDTH);
 		
-		CNN cnn = new CNN(getOpts(), cLayer, new FullyConnectedLayer(MAP_SIZE*KERNELS, 30), new FullyConnectedLayer(30, 10));
-		cnn.checkDimensionality(new Dimension(Image.HEIGHT, Image.WIDTH, 1), new Dimension(10, 1, 1));
+		CNN cnn = new CNN(getOpts(),
+				cLayer,
+				new FlatteningLayer(),
+				new FullyConnectedLayer(MAP_SIZE*KERNELS, 30),
+				new SigmaLayer(),
+				new FullyConnectedLayer(30, 10));
+		//cnn.checkDimensionality(new Dimension(Image.HEIGHT, Image.WIDTH, 1), new Dimension(10, 1, 1));
 		
+		/*
 		System.out.println("Augmenting images...");
 		List<Image> augmentedTraining = new ArrayList<>(trainingImages);
-		/*
 		for(Image i : trainingImages) {
 			augmentedTraining.add(i.rotate(Math.PI/6));
 			
@@ -83,7 +92,7 @@ public class CNNPlayground {
 		}
 		System.gc();
 		*/
-		cnn.SGD(augmentedTraining, 10, 2, 0.5, 5);
+		cnn.SGD(trainingImages, 10, 2, 0.5, 5);
 		
 		totals(cnn);
 		for(int i=0; i<5; i++) {

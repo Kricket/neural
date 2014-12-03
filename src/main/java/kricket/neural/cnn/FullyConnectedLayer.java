@@ -1,92 +1,74 @@
 package kricket.neural.cnn;
 
-import kricket.neural.util.Dimension;
-import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.Matrix;
 
-public class FullyConnectedLayer extends Layer {
-	
+/**
+ * A fully-connected layer contains a number of neurons. Each neuron's output is a
+ * linear function of all the inputs to this layer.
+ */
+public class FullyConnectedLayer implements Layer {
+
 	/**
-	 * The weights and biases of this Layer.
+	 * The parameters of this Layer.
 	 */
 	final Matrix weights, biases;
 	/**
-	 * Values that were calculated on the last feedforward pass.
+	 * The last input received.
 	 */
-	private final Matrix[] lastZ, lastActivation;
+	Matrix lastX;
 	/**
-	 * Accumulated gradients, calculated during backpropagation.
+	 * The running total of the calculated gradients of the weights and biases.
 	 */
-	Matrix nabla_Cw, nabla_Cb;
+	Matrix dW, dB;
 	
+	/**
+	 * @param inputLength The number of input values
+	 * @param outputLength The number of neurons in this Layer (= number of output values)
+	 */
 	public FullyConnectedLayer(int inputLength, int outputLength) {
 		weights = Matrix.random(outputLength, inputLength);
 		biases = Matrix.random(outputLength, 1);
-		lastZ = new Matrix[1];
-		lastActivation = new Matrix[1];
 	}
 	
 	@Override
-	public Matrix[] feedForward(Matrix[] featureMaps) {
-		/*
-		if(featureMaps.length != 1)
-			throw new IllegalArgumentException(featureMaps.length+" feature maps were given.");
-		*/
-		lastZ[0] = weights.times(flatten(featureMaps)).plusEquals(biases);
-		lastActivation[0] = sigma(lastZ[0].copy());
+	public Matrix[] feedForward(Matrix[] x) {
+		if(x.length != 1)
+			throw new IllegalArgumentException("You tried to send me " + x.length + " feature maps!");
+		if(x[0].data.length != weights.cols)
+			throw new IllegalArgumentException("Should have " + weights.cols + " inputs, but actually got " + x[0].data.length);
 		
-		return lastActivation;
-	}
-	
-	@Override
-	public void calcGradients(Matrix[] prevActivations, Matrix[] deltas) {
-		/*
-		if(deltas.length != 1 || prevActivations.length != 1)
-			throw new IllegalArgumentException("WTF? We have "+deltas.length+" deltas and "+prevActivations.length+" previous activations!");
-		*/
-		nabla_Cb.plusEquals(deltas[0]);
-		nabla_Cw.plusEquals(deltas[0].timesTranspose(flatten(prevActivations)));
+		lastX = x[0];
+		return new Matrix[] {weights.times(lastX).plusEquals(biases)};
 	}
 
 	@Override
-	public Matrix[] backprop(Matrix[] prevZ, Matrix[] deltas) {
-		Matrix backDelta = weights
-				.transposeTimes(deltas[0])
-				.dotTimesEquals(dSigma(flatten(prevZ)));
+	public Matrix[] backprop(Matrix[] deltas) {
+		if(deltas[0].data.length != biases.data.length)
+			throw new IllegalArgumentException("Should have " + biases.rows + " deltas, but actually got " + deltas[0].data.length);
 		
-		return new Matrix[] {backDelta};
+		/*
+		 * backprop is actually two operations:
+		 * - calculate the derivatives wrt the weights and biases, and add them to dW and dB
+		 * - calculate the derivatives wrt the inputs, and return them
+		 */
+		dB.plusEquals(deltas[0]);
+		dW.plusEquals(deltas[0].timesTranspose(lastX));
+		
+		return new Matrix[] {weights.transposeTimes(deltas[0])};
 	}
 
 	@Override
 	public void resetGradients() {
-		nabla_Cb = new Matrix(biases.rows, biases.cols);
-		nabla_Cw = new Matrix(weights.rows, weights.cols);
+		dW = new Matrix(weights.rows, weights.cols);
+		dB = new Matrix(biases.rows, biases.cols);
 	}
 
 	@Override
-	public Matrix[] lastActivation() {
-		return lastActivation;
-	}
-
-	@Override
-	public Matrix[] lastZ() {
-		return lastZ;
-	}
-	
-	@Override
-	public void applyGradients(double regTerm, double eta, int batchSize) {
+	public void applyGradients(double regTerm, double scale) {
 		if(regTerm != 0)
 			weights.timesEquals(regTerm);
-		weights.plusEquals(nabla_Cw.timesEquals(-eta / batchSize));
-		biases.plusEquals(nabla_Cb.timesEquals(-eta / batchSize));
-	}
-
-	@Override
-	public Dimension getOutputDimension(Dimension inputDimension) throws IncompatibleLayerException {
-		int flatInputSize = inputDimension.columns * inputDimension.rows * inputDimension.depth;
-		if(flatInputSize != weights.cols)
-			throw new IncompatibleLayerException(inputDimension, this);
-		return new Dimension(biases.rows, 1, 1);
+		weights.plusEquals(dW.timesEquals(-scale));
+		biases.plusEquals(dB.timesEquals(-scale));
 	}
 	
 	@Override

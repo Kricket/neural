@@ -4,14 +4,19 @@ import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.Matrix;
 
-public class ConvolutionalLayer extends Layer {
+/**
+ * A convolutional layer is composed of one or more kernels. Each kernel is a small, rectangular
+ * pattern that acts like a single neuron of a fully-connected layer, but is applied repeatedly
+ * for a single input feature map.
+ */
+public class ConvolutionalLayer implements Layer {
 	
 	private final Matrix[] kernels;
 	private final Matrix biases;
 	private final int skipCols, skipRows;
-	private Matrix[] lastActivation, lastZ;
-	private Matrix[] nabla_Ck;
-	private Matrix nabla_Cb;
+	private Matrix[] lastX;
+	private Matrix[] dK;
+	private Matrix dB;
 	
 	public ConvolutionalLayer(int numKernels, int kernelWidth, int kernelHeight, int skipColmuns, int skipRows) {
 		kernels = new Matrix[numKernels];
@@ -22,10 +27,9 @@ public class ConvolutionalLayer extends Layer {
 		this.skipCols = skipColmuns;
 		this.skipRows = skipRows;
 		
-		nabla_Ck = new Matrix[numKernels];
+		dK = new Matrix[numKernels];
 	}
 	
-	@Override
 	public Dimension getOutputDimension(Dimension inputDimension) throws IncompatibleLayerException {
 		int rows = getOutputRows(inputDimension.rows), cols = getOutputColumns(inputDimension.columns);
 		if(rows < 1 || cols < 1 || inputDimension.depth < 1)
@@ -54,123 +58,71 @@ public class ConvolutionalLayer extends Layer {
 	}
 
 	@Override
-	public Matrix[] feedForward(Matrix[] featureMaps) {
-		lastZ = new Matrix[featureMaps.length * kernels.length];
+	public Matrix[] feedForward(Matrix[] x) {
+		lastX = x;
+		Matrix[] y = new Matrix[x.length * kernels.length]; 
 		
 		int resultIndex = 0;
-		for(Matrix inputMap : featureMaps) {
+		for(Matrix inputMap : x) {
 			int rows = getOutputRows(inputMap.rows), cols = getOutputColumns(inputMap.cols);
 			for(int k=0; k<kernels.length; k++) {
-				Matrix outMap = lastZ[resultIndex++] = new Matrix(rows, cols);
+				Matrix outMap = y[resultIndex++] = new Matrix(rows, cols);
 				for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
-					outMap.set(r, c, inputMap.subMatrixDot(r*skipRows, c*skipCols, kernels[k]) + biases.data[k]);
+					Matrix subMatrix = inputMap.subMatrix(r*skipRows, c*skipCols, kernels[k].rows, kernels[k].cols);
+					outMap.set(r, c, subMatrix.dot(kernels[k]) + biases.data[k]);
 				}
 			}
 		}
 		
-		lastActivation = sigma(lastZ);
-		return lastActivation;
-	}
-
-	private Matrix[] sigma(Matrix[] zs) {
-		Matrix[] m = new Matrix[zs.length];
-		for(int i=0; i<m.length; i++)
-			m[i] = sigma(zs[i].copy());
-		return m;
+		return y;
 	}
 
 	@Override
-	public Matrix[] backprop(Matrix[] prevZ, Matrix[] deltas) {
-		throw new UnsupportedOperationException("TODO");
-	}
-
-	@Override
-	public void calcGradients(Matrix[] prevActivations, Matrix[] deltas) {
-		// We should have 1 delta Matrix for each output feature map.
-		deltas = unflatten(deltas, prevActivations);
+	public Matrix[] backprop(Matrix[] deltas) {
+		if(deltas.length != kernels.length * lastX.length)
+			throw new IllegalArgumentException("Should have " + (kernels.length * lastX.length)
+					+ " deltas, but there are " + deltas.length);
 		
-		if(deltas.length != prevActivations.length * kernels.length)
-			throw new IllegalArgumentException("WTF? We have " + deltas.length + " deltas (output feature maps), "
-					+ kernels.length + " kernels, and " + prevActivations.length + " previous feature maps!");
-		
-		for(int m = 0; m < prevActivations.length; m++) {
+		// The idea here is: since each kernel is basically like a single fully-connected neuron,
+		// we simply repeat the feedforward loops to pair up the kernels with the sub-images
+		// where they are applied.
+		Matrix[] back = new Matrix[lastX.length];
+		for(int i=0; i<lastX.length; i++) {
+			back[i] = new Matrix(lastX[i].rows, lastX[i].cols);
 			for(int k=0; k<kernels.length; k++) {
-				// deltas[m * k] = delta for the map built with kernel k and input map m
-				Matrix delta = deltas[m*k];
-				for(int dr=0; dr<delta.rows; dr++) {
-					for(int dc=0; dc<delta.cols; dc++) {
-						// The values here should be reduced by the number of times the kernel is repeated (i.e., the
-						// size of delta). As an optimization, we do it in applyGradients, instead.
-						nabla_Cb.data[k] += delta.at(dr, dc);
-						nabla_Ck[k].plusEqualsSubMatrix(prevActivations[m], dr*skipRows, dc*skipCols, delta.at(dr, dc));
-					}
+				Matrix delta = deltas[i*lastX.length + k];
+				// delta(r,c) = the error for kernel k applied to x[i] at (r*skip, c*skip)
+				for(int r=0; r<delta.rows; r++) for(int c=0; c<delta.cols; c++) {
+					dB.data[k] += delta.at(r, c);
+					
+					Matrix xSubMatrix = lastX[i].subMatrix(r*skipRows, c*skipCols, kernels[k].rows, kernels[k].cols);
+					dK[k].plusEquals(xSubMatrix.copy().timesEquals(delta.at(r,c)));
+					
+					Matrix backSubMatrix = back[i].subMatrix(r*skipRows, c*skipCols, kernels[k].rows, kernels[k].cols);
+					backSubMatrix.plusEquals(kernels[k]);
 				}
 			}
 		}
-	}
-
-	/**
-	 * Inverse of the "flatten" operation. I.e.: in case we happened to receive a single column vector
-	 * as our "deltas", we need to explode it into the correct array of deltas of each output feature map.
-	 * @param deltas
-	 * @param inputs
-	 * @return
-	 */
-	public Matrix[] unflatten(Matrix[] deltas, Matrix[] inputs) {
-		if(deltas.length > 1) {
-			if(deltas.length != inputs.length * kernels.length)
-				throw new IllegalArgumentException("Unable to unflatten " + deltas.length
-						+ " deltas, when there are " + inputs.length + " input maps and "
-						+ kernels.length + " kernels");
-			return deltas;
-		}
 		
-		Matrix[] result = new Matrix[inputs.length * kernels.length];
-		int offset = 0;
-		
-		for(int i=0; i<inputs.length; i++) {
-			int outputRows = getOutputRows(inputs[i].rows),
-					outputColumns = getOutputColumns(inputs[i].cols);
-			
-			for(int k=0; k<kernels.length; k++) {
-				double[] delta_ik = new double[outputRows * outputColumns];
-				System.arraycopy(deltas[0].data, offset, delta_ik, 0, delta_ik.length);
-				result[i*kernels.length + k] = new Matrix(outputRows, outputColumns, delta_ik);
-				offset += delta_ik.length;
-			}
-		}
-		
-		return result;
-	}
-	
-	@Override
-	public Matrix[] lastActivation() {
-		return lastActivation;
+		return back;
 	}
 
 	@Override
-	public Matrix[] lastZ() {
-		return lastZ;
-	}
-
-	@Override
-	public void applyGradients(double regTerm, double eta, int batchSize) {
-		int scaleDown = getOutputColumns(lastActivation[0].cols) * getOutputRows(lastActivation[0].rows);
-		double factor = -eta / (batchSize*scaleDown);
-		biases.plusEquals(nabla_Cb.timesEquals(factor));
+	public void applyGradients(double regTerm, double scale) {
+		biases.plusEquals(dB.timesEquals(-scale));
 		
 		for(int k=0; k<kernels.length; k++) {
 			if(regTerm != 0)
 				kernels[k].timesEquals(regTerm);
-			kernels[k].plusEquals(nabla_Ck[k].timesEquals(factor));
+			kernels[k].plusEquals(dK[k].timesEquals(-scale));
 		}
 	}
 
 	@Override
 	public void resetGradients() {
-		nabla_Cb = new Matrix(biases.rows, biases.cols);
-		for(int i=0; i<nabla_Ck.length; i++)
-			nabla_Ck[i] = new Matrix(kernels[i].rows, kernels[i].cols);
+		dB = new Matrix(biases.rows, biases.cols);
+		for(int i=0; i<dK.length; i++)
+			dK[i] = new Matrix(kernels[i].rows, kernels[i].cols);
 	}
 	
 	public String toString() {

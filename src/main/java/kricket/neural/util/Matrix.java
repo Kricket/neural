@@ -93,8 +93,8 @@ public class Matrix {
 		if(data.length != m.data.length)
 			throw new IllegalArgumentException("I have " + data.length + " elements, but m has " + m.data.length);
 		*/
-		for(int i=0; i<data.length; i++)
-			data[i] += m.data[i];
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++)
+			set(r, c, at(r,c) + m.at(r,c));
 		return this;
 	}
 
@@ -109,9 +109,11 @@ public class Matrix {
 				// this.row r . m.col c
 				double rc = 0;
 				for(int i=0; i<cols; i++) {
-					rc += data[r*cols + i] * m.data[i*m.cols + c];
+					//rc += data[r*cols + i] * m.data[i*m.cols + c];
+					rc += at(r,i) * m.at(i,c);
 				}
-				p.data[p.cols*r + c] = rc;
+				//p.data[p.cols*r + c] = rc;
+				p.set(r, c, rc);
 			}
 		}
 		return p;
@@ -133,9 +135,11 @@ public class Matrix {
 				// this.col r . m.col c
 				double rc = 0;
 				for(int i=0; i<rows; i++) {
-					rc += data[i*cols + r] * m.data[i*m.cols + c];
+					//rc += data[i*cols + r] * m.data[i*m.cols + c];
+					rc += at(i,r) * m.at(i,c);
 				}
-				p.data[p.cols*r + c] = rc;
+				//p.data[p.cols*r + c] = rc;
+				p.set(r, c, rc);
 			}
 		}
 		return p;
@@ -157,9 +161,11 @@ public class Matrix {
 				// this.row r . m.row c
 				double rc = 0;
 				for(int i=0; i<cols; i++) {
-					rc += data[r*cols + i] * m.data[c*m.cols + i];
+					//rc += data[r*cols + i] * m.data[c*m.cols + i];
+					rc += at(r,i) * m.at(c,i);
 				}
-				p.data[p.cols*r + c] = rc;
+				//p.data[p.cols*r + c] = rc;
+				p.set(r, c, rc);
 			}
 		}
 		return p;
@@ -167,21 +173,21 @@ public class Matrix {
 	
 	public Matrix copy() {
 		Matrix m = new Matrix(rows, cols);
-		for(int i=0; i<data.length; i++) {
-			m.data[i] = data[i];
-		}
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++)
+			m.set(r, c, at(r,c));
 		return m;
 	}
 	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		for(int i=0; i<data.length; i++) {
-			if(i%cols == 0 && i>0)
+		for(int r=0; r<rows; r++) {
+			if(r > 0)
 				sb.append("\n");
-			
-			sb.append(" ");
-			sb.append(Math.round(data[i]*1000) * 0.001);
+			for(int c=0; c<cols; c++) {
+				sb.append(" ");
+				sb.append(String.format("%.3f", at(r,c)));
+			}
 		}
 		
 		return sb.toString();
@@ -193,8 +199,8 @@ public class Matrix {
 	 * @return this
 	 */
 	public Matrix timesEquals(double d) {
-		for(int i=0; i<data.length; i++)
-			data[i] *= d;
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++)
+			set(r,c, at(r,c) * d);
 		return this;
 	}
 	
@@ -204,12 +210,12 @@ public class Matrix {
 	 * @return this
 	 */
 	public Matrix dotTimesEquals(Matrix m) {
-		/**/
+		/*
 		if(cols != m.cols || rows != m.rows)
 			throw new IllegalArgumentException("Incompatible dimensions: I am (" + rows + "," + cols + "), m is (" + m.rows + "," + m.cols + ")");
-		/**/
-		for(int i=0; i<data.length; i++)
-			data[i] *= m.data[i];
+		*/
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++)
+			set(r, c, at(r,c) * m.at(r,c));
 		
 		return this;
 	}
@@ -220,8 +226,8 @@ public class Matrix {
 			throw new IllegalArgumentException("Incompatible dimensions: I am (" + rows + "," + cols + "), m is (" + m.rows + "," + m.cols + ")");
 		*/
 		Matrix result = new Matrix(rows, cols);
-		for(int i=0; i<data.length; i++)
-			result.data[i] = data[i] - m.data[i];
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++)
+			result.set(r, c, at(r,c) - m.at(r,c));
 		return result;
 	}
 
@@ -236,7 +242,7 @@ public class Matrix {
 			if(rowsToRemove.contains(r))
 				continue;
 			for(int c=0; c<cols; c++) {
-				m.data[mr*cols + c] = data[r*cols + c];
+				m.set(mr, c, at(r,c));
 			}
 			mr++;
 		}
@@ -255,7 +261,7 @@ public class Matrix {
 			for(int c=0; c<cols; c++) {
 				if(colsToRemove.contains(c))
 					continue;
-				m.data[r*m.cols + mc] = data[r*cols + c];
+				m.set(r,mc,at(r,c));
 				mc++;
 			}
 		}
@@ -290,7 +296,7 @@ public class Matrix {
 			for(int c=0; c<cols; c++) {
 				if(removedCols.contains(c))
 					continue;
-				data[r*cols + c] = m.data[r*m.cols + mc];
+				set(r,c,m.at(r,mc));
 				mc++;
 			}
 		}
@@ -305,32 +311,47 @@ public class Matrix {
 		if(m.rows != rows || m.cols != cols)
 			return false;
 		
-		for(int i=0; i<data.length; i++)
-			if(m.data[i] != data[i])
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++)
+			if(at(r,c) != m.at(r,c))
 				return false;
 		
 		return true;
 	}
-
+	
 	/**
-	 * Sum up the products of the entries of the sub-matrix starting at (startRow, startCol)
-	 * with the entries of the given Matrix.
+	 * Get the sub-matrix of this Matrix at the given coordinates.
 	 * @param startRow
 	 * @param startCol
-	 * @param kernel
+	 * @param sRows rowspan of the sub-matrix
+	 * @param sCols colspan of the sub-matrix
 	 * @return
 	 */
-	public double subMatrixDot(int startRow, int startCol, Matrix kernel) {
-		double result = 0;
-		int k = 0;
-		for(int r=startRow; r<startRow+kernel.rows; r++) {
-			for(int c=startCol; c<startCol+kernel.cols; c++) {
-				result += at(r, c) * kernel.data[k++];
-			}
-		}
-		return result;
+	public Matrix subMatrix(int startRow, int startCol, int sRows, int sCols) {
+		/*
+		if(startRow+sRows > rows || startCol+sCols > cols)
+			throw new IllegalArgumentException("Illegal submatrix: I am " + rows + "x" + cols
+					+ " and you wanted " + sRows + "x" + sCols
+					+ " starting at " + startRow + "," + startCol);
+		*/
+		return new SubMatrix(this, sRows, sCols, startRow, startCol);
 	}
-
+	
+	/**
+	 * Sum of the elementwise products of this and the given Matrix.
+	 * @param m
+	 * @return
+	 */
+	public double dot(Matrix m) {
+		/*
+		if(m.rows != rows || m.cols != cols)
+			throw new IllegalArgumentException("I am " + rows + "x" + cols + " and m is " + m.rows + "x" + m.cols);
+		*/
+		double d = 0;
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++)
+			d += at(r,c) * m.at(r,c);
+		return d;
+	}
+	
 	/**
 	 * Add a submatrix of m (scaled by the given factor) to this.
 	 * @param m
@@ -338,12 +359,13 @@ public class Matrix {
 	 * @param startCol
 	 * @param factor
 	 */
+	/*
 	public void plusEqualsSubMatrix(Matrix m, int startRow, int startCol, double factor) {
 		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
 			data[r*cols+c] += m.at(r+startRow, c+startCol) * factor;
 		}
 	}
-	
+	*/
 	public String draw() {
 		double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
 		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {

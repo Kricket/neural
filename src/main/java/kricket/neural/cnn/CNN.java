@@ -4,8 +4,6 @@ import java.util.List;
 
 import kricket.neural.NNBase;
 import kricket.neural.util.Datum;
-import kricket.neural.util.Dimension;
-import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
 
@@ -16,13 +14,18 @@ public class CNN extends NNBase {
 	 */
 	private final Layer[] layers;
 	
+	/**
+	 * Create a new network.
+	 * <p><b>Attention: </b>an EXTRA SigmaLayer will be added to the end!
+	 * @param opts
+	 * @param layers
+	 */
 	public CNN(NNOptions opts, Layer ...layers) {
 		super(opts);
-		
-		if(layers.length < 1)
-			throw new IllegalArgumentException("No layers given!");
-		
-		this.layers = layers;
+		this.layers = new Layer[layers.length+1];
+		for(int i=0; i<layers.length; i++)
+			this.layers[i] = layers[i];
+		this.layers[layers.length] = new SigmaLayer();
 	}
 	
 	@Override
@@ -36,25 +39,26 @@ public class CNN extends NNBase {
 	}
 	
 	/**
-	 * Shortcut for {@link #feedForward(Matrix[])}
+	 * Get the result of running the given feature maps through this CNN.
+	 * @param x The initial feature maps.
+	 * @return
 	 */
-	public Matrix[] feedForward(Matrix input) {
-		return feedForward(new Matrix[] {input});
+	public Matrix[] feedForward(Matrix[] x) {
+		for(Layer layer : layers) {
+			x = layer.feedForward(x);
+		}
+		return x;
 	}
 	
 	/**
-	 * Get the result of running the given feature maps through this CNN.
-	 * @param featureMaps The initial features.
+	 * Shortcut for {@link #feedForward(Matrix[])}
+	 * @param x
 	 * @return
 	 */
-	public Matrix[] feedForward(Matrix[] featureMaps) {
-		Matrix[] current = featureMaps;
-		for(Layer layer : layers) {
-			current = layer.feedForward(current);
-		}
-		return current;
+	public Matrix[] feedForward(Matrix x) {
+		return feedForward(new Matrix[]{x});
 	}
-	
+
 	@Override
 	protected void runBatch(List<? extends Datum> batch, double regTerm, double eta) {
 		for(Layer layer : layers)
@@ -64,23 +68,25 @@ public class CNN extends NNBase {
 			backprop(dat.getData(), dat.getAnswer());
 		
 		for(Layer layer : layers)
-			layer.applyGradients(regTerm, eta, batch.size());
+			layer.applyGradients(regTerm, eta/batch.size());
 	}
 
-
+	/**
+	 * Run the backpropagation algorithm.
+	 * @param x
+	 * @param y
+	 */
 	private void backprop(Matrix x, Matrix y) {
 		Matrix[] forward = feedForward(x);
-		Matrix[] delta = new Matrix[] {forward[0].minus(y)};
-		// This delta represents the cross-entropy cost function.
-		// To use quadratic cost, you must also do (for each delta and Z):
-		//   delta.dotTimesEquals(dSigma(lastLayer.lastZ()))
+		Matrix[] deltas = new Matrix[] {forward[0].minus(y)};
 		
-		for(int i=layers.length-1; i>0; i--) {
-			layers[i].calcGradients(layers[i-1].lastActivation(), delta);
-			delta = layers[i].backprop(layers[i-1].lastZ(), delta);
+		// The cross-entropy cost function basically boils down to not running
+		// backpropagation on the last (sigmoid) layer. If we instead wanted
+		// to use quadratic cost, we would simply include the last layer in the
+		// following loop.
+		for(int i=layers.length-2; i>=0; i--) {
+			deltas = layers[i].backprop(deltas);
 		}
-		
-		layers[0].calcGradients(new Matrix[]{x}, delta);
 	}
 
 	@Override
@@ -101,15 +107,4 @@ public class CNN extends NNBase {
 		options.log.info(String.format("-------------------> Percent correct: %.3f", correct*100));
 		return correct;
 	}
-	
-	public void checkDimensionality(Dimension input, Dimension output) throws IncompatibleLayerException {
-		for(Layer layer : layers) {
-			input = layer.getOutputDimension(input);
-		}
-		
-		if(!input.equals(output)) {
-			throw new IncompatibleLayerException(output, layers[layers.length-1]);
-		}
-	}
-
 }
