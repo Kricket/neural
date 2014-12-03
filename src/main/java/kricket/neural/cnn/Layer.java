@@ -1,5 +1,7 @@
 package kricket.neural.cnn;
 
+import kricket.neural.util.Dimension;
+import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.Matrix;
 
 /**
@@ -34,4 +36,13 @@ public interface Layer {
 	 * Reset the calculated gradients to 0.
 	 */
 	void resetGradients();
+
+	/**
+	 * Check that this Layer is compatible with the given input dimensions, and prepare any
+	 * optimizations (resource allocation) prior to execution.
+	 * @param inputDimension The size of the incoming data.
+	 * @return The size of the output that this Layer will emit.
+	 * @throws IncompatibleLayerException if this Layer is incompatible with the given input dimension.
+	 */
+	Dimension prepare(Dimension inputDimension) throws IncompatibleLayerException;
 }

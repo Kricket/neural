@@ -12,6 +12,7 @@ import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
 import kricket.neural.util.SingleDatum;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class CNNTest {
@@ -26,9 +27,9 @@ public class CNNTest {
 	}
 
 	@Test
-	public void canTrainForSingleDatum_1Layer() {
+	public void canTrainForSingleDatum_1Layer() throws IncompatibleLayerException {
 		Datum data = new SingleDatum(0,0);
-		CNN cnn = new CNN(getOpts(), new FullyConnectedLayer(1, 1));
+		CNN cnn = new CNN(getOpts(), new Dimension(1, 1, 1), new FullyConnectedLayer(1));
 		
 		cnn.SGD(Arrays.asList(data), 1, 100, 5, 0);
 		
@@ -37,9 +38,9 @@ public class CNNTest {
 	}
 	
 	@Test
-	public void convCanTrainForSingleDatum_1Layer() {
+	public void convCanTrainForSingleDatum_1Layer() throws IncompatibleLayerException {
 		Datum data = new SingleDatum(0,0);
-		CNN cnn = new CNN(getOpts(), new ConvolutionalLayer(1, 1, 1, 1, 1));
+		CNN cnn = new CNN(getOpts(), new Dimension(1, 1, 1), new ConvolutionalLayer(1, 1, 1, 1, 1));
 		
 		cnn.SGD(Arrays.asList(data), 1, 100, 5, 0);
 		
@@ -48,14 +49,14 @@ public class CNNTest {
 	}
 	
 	@Test
-	public void canTrainForSingleDatum_3Layer() {
+	public void canTrainForSingleDatum_3Layer() throws IncompatibleLayerException {
 		Datum data = new SingleDatum(0,0);
-		CNN cnn = new CNN(getOpts(),
-				new FullyConnectedLayer(1, 3),
+		CNN cnn = new CNN(getOpts(), new Dimension(1, 1, 1),
+				new FullyConnectedLayer(3),
 				new SigmaLayer(),
-				new FullyConnectedLayer(3, 5),
+				new FullyConnectedLayer(5),
 				new SigmaLayer(),
-				new FullyConnectedLayer(5, 1));
+				new FullyConnectedLayer(1));
 		
 		cnn.SGD(Arrays.asList(data), 1, 100, 5, 0);
 		
@@ -64,9 +65,9 @@ public class CNNTest {
 	}
 	
 	@Test
-	public void canTrainForTwoSingleValues() {
+	public void canTrainForTwoSingleValues() throws IncompatibleLayerException {
 		List<SingleDatum> data = Arrays.asList(new SingleDatum(0,0), new SingleDatum(1, 1));
-		CNN cnn = new CNN(getOpts(), new FullyConnectedLayer(1, 1));
+		CNN cnn = new CNN(getOpts(), new Dimension(1, 1, 1), new FullyConnectedLayer(1));
 		
 		cnn.SGD(data, 1, 100, 10, 0);
 		
@@ -77,9 +78,9 @@ public class CNNTest {
 	}
 	
 	@Test
-	public void convCanTrainForTwoSingleValues() {
+	public void convCanTrainForTwoSingleValues() throws IncompatibleLayerException {
 		List<SingleDatum> data = Arrays.asList(new SingleDatum(0,0), new SingleDatum(1, 1));
-		CNN cnn = new CNN(getOpts(), new ConvolutionalLayer(1, 1, 1, 1, 1));
+		CNN cnn = new CNN(getOpts(), new Dimension(1, 1, 1), new ConvolutionalLayer(1, 1, 1, 1, 1));
 		
 		cnn.SGD(data, 1, 100, 10, 0);
 		
@@ -88,23 +89,20 @@ public class CNNTest {
 		forward = cnn.feedForward(data.get(1).getData())[0].data[0];
 		assertTrue("Actual value: " + forward, forward > 0.99);
 	}
-	/*
+	
 	@Test(expected=IncompatibleLayerException.class)
 	public void illegalLayerSizes() throws IncompatibleLayerException {
-		CNN cnn = new CNN(getOpts(), new FullyConnectedLayer(1, 2), new FullyConnectedLayer(1, 2));
-		cnn.checkDimensionality(new Dimension(1,1,1), new Dimension(2,1,1));
+		new CNN(getOpts(), new Dimension(1, 1, 1), new ConvolutionalLayer(2, 1, 1, 1, 1), new FullyConnectedLayer(2));
 	}
 	
 	@Test(expected=IncompatibleLayerException.class)
-	public void illegalInputSize() throws IncompatibleLayerException {
-		CNN cnn = new CNN(getOpts(), new FullyConnectedLayer(1, 2));
-		cnn.checkDimensionality(new Dimension(2,1,1), new Dimension(2,1,1));
+	public void fc_illegalOutputCols() throws IncompatibleLayerException {
+		new CNN(getOpts(), new Dimension(1, 2, 1), new FullyConnectedLayer(2));
 	}
 	
 	@Test(expected=IncompatibleLayerException.class)
-	public void illegalOutputSize() throws IncompatibleLayerException {
-		CNN cnn = new CNN(getOpts(), new FullyConnectedLayer(1, 2));
-		cnn.checkDimensionality(new Dimension(1,1,1), new Dimension(1,1,1));
+	public void fc_illegalOutputDepth() throws IncompatibleLayerException {
+		new CNN(getOpts(), new Dimension(1, 1, 2), new FullyConnectedLayer(2));
 	}
 	
 	final double EPSILON = Math.pow(2, -32) ;
@@ -112,16 +110,15 @@ public class CNNTest {
 	/**
 	 * Attempt to make sure that our gradient calculation is about what you'd get if
 	 * you treated the layer like a black-box function of its weights and biases.
-	 * NOTE that this still fails sometimes! I should have paid more attention in
-	 * calculus... :)
+	 * @throws IncompatibleLayerException 
 	 */
-	/*
-	@Test
-	public void handCheckGradients() {
-		FullyConnectedLayer layer = new FullyConnectedLayer(3, 3);
+	@Test @Ignore
+	public void handCheckGradients() throws IncompatibleLayerException {
+		FullyConnectedLayer layer = new FullyConnectedLayer(3);
+		layer.prepare(new Dimension(3,1,1));
 		// For some reason, values close to the extremes tend to increase the error in our estimation.
 		// (Is this due to the sigma function?)
-		layer.weights.timesEquals(0.5);
+		//layer.weights.timesEquals(0.5);
 		layer.resetGradients();
 		
 		Matrix[] x = new Matrix[] {new Matrix(.9,.5,.1)};
@@ -129,11 +126,7 @@ public class CNNTest {
 		// Let the Layer calculate its own gradients
 		Matrix output = layer.feedForward(x)[0];
 		Matrix[] delta = new Matrix[] {new Matrix(1,1,1)};
-		layer.calcGradients(x, delta);
-		
-		
-		System.out.println("sigma = " + Layer.sigma(1.));
-		
+		layer.backprop(delta);
 		
 		// Now, manually calculate them
 		Matrix origW = layer.weights.copy(), origB = layer.biases.copy();
@@ -150,7 +143,7 @@ public class CNNTest {
 			// I have no idea why, but the fPrime value always seems to be about 1/4 of what
 			// the layer calculates. (Slightly less than 1/4 if epsilon < 1; slightly more
 			// if epsilon > 1).
-			double dW = layer.nabla_Cw.at(r, c);
+			double dW = layer.dW.at(r, c);
 			assertEquals("at row " + r + " col " + c + "\n" + layer.weights + "\n" + layer.biases,
 					dW/4, fPrime, dW/10);
 		}
@@ -162,7 +155,7 @@ public class CNNTest {
 			Matrix outph = layer.feedForward(x)[0];
 			double fPrime = outph.minus(output).at(r, 0) / EPSILON;
 			
-			double dB = layer.nabla_Cb.at(r, 0);
+			double dB = layer.dB.at(r, 0);
 			System.out.println("dB = " + dB + " fPrime = " + fPrime);
 			assertEquals("at row " + r + "\n" + layer.weights + "\n" + layer.biases,
 					dB/4, fPrime, dB/10);
@@ -172,5 +165,4 @@ public class CNNTest {
 	private void copy(Matrix target, Matrix source) {
 		System.arraycopy(source.data, 0, target.data, 0, source.data.length);
 	}
-	*/
 }

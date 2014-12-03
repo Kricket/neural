@@ -1,5 +1,6 @@
 package kricket.neural.cnn;
 
+import kricket.neural.util.Dimension;
 import kricket.neural.util.Matrix;
 
 /**
@@ -9,7 +10,7 @@ import kricket.neural.util.Matrix;
  */
 public class SigmaLayer implements Layer {
 	
-	private Matrix[] lastX;
+	private Matrix[] lastX, lastY;
 
 	/**
 	 * The smoothing function.
@@ -21,15 +22,14 @@ public class SigmaLayer implements Layer {
 	}
 	
 	/**
-	 * Get a copy of the given matrix, with sigma applied to each entry
+	 * Set s = sigma(m), for each entry of m
 	 * @param m
+	 * @param s
 	 * @return
 	 */
-	public static Matrix sigma(Matrix m) {
-		Matrix s = new Matrix(m.rows, m.cols);
+	public static void sigma(Matrix m, Matrix s) {
 		for(int i=0; i<s.data.length; i++)
 			s.data[i] = sigma(m.data[i]);
-		return s;
 	}
 	
 	/**
@@ -43,25 +43,24 @@ public class SigmaLayer implements Layer {
 	}
 	
 	/**
-	 * TODO: probably don't need to copy the matrix here
+	 * MODIFIES the given matrix by applying the derivative of the sigma function
+	 * on each element.
 	 * @param m
 	 * @return
 	 */
 	public static Matrix dSigma(Matrix m) {
-		Matrix s = new Matrix(m.rows, m.cols);
-		for(int i=0; i<s.data.length; i++)
-			s.data[i] = dSigma(m.data[i]);
-		return s;
+		for(int i=0; i<m.data.length; i++)
+			m.data[i] = dSigma(m.data[i]);
+		return m;
 	}
 	
 	@Override
 	public Matrix[] feedForward(Matrix[] x) {
 		lastX = x;
-		Matrix[] y = new Matrix[x.length];
 		for(int i=0; i<x.length; i++) {
-			y[i] = sigma(x[i]);
+			sigma(x[i], lastY[i]);
 		}
-		return y;
+		return lastY;
 	}
 
 	@Override
@@ -89,4 +88,16 @@ public class SigmaLayer implements Layer {
 		// Nothing to do
 	}
 
+	@Override
+	public Dimension prepare(Dimension inputDimension) {
+		lastY = new Matrix[inputDimension.depth];
+		for(int i=0; i<lastY.length; i++)
+			lastY[i] = new Matrix(inputDimension.rows, inputDimension.columns);
+		return inputDimension;
+	}
+
+	@Override
+	public String toString() {
+		return getClass().getSimpleName();
+	}
 }

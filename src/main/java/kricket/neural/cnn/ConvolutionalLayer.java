@@ -14,9 +14,10 @@ public class ConvolutionalLayer implements Layer {
 	private final Matrix[] kernels;
 	private final Matrix biases;
 	private final int skipCols, skipRows;
-	private Matrix[] lastX;
+	private Matrix[] lastX, lastY;
 	private Matrix[] dK;
 	private Matrix dB;
+	private int outputRows, outputCols;
 	
 	public ConvolutionalLayer(int numKernels, int kernelWidth, int kernelHeight, int skipColmuns, int skipRows) {
 		kernels = new Matrix[numKernels];
@@ -30,51 +31,38 @@ public class ConvolutionalLayer implements Layer {
 		dK = new Matrix[numKernels];
 	}
 	
-	public Dimension getOutputDimension(Dimension inputDimension) throws IncompatibleLayerException {
-		int rows = getOutputRows(inputDimension.rows), cols = getOutputColumns(inputDimension.columns);
-		if(rows < 1 || cols < 1 || inputDimension.depth < 1)
-			throw new IncompatibleLayerException(inputDimension, this);
-		return new Dimension(rows, cols, inputDimension.depth * kernels.length);
+	/**
+	 * Get the number of rows in an output feature map.
+	 * @return
+	 */
+	public int getOutputRows() {
+		return outputRows;
 	}
 	
 	/**
-	 * Get the number of rows in an output feature map, if the input feature map has
-	 * the given number of rows.
-	 * @param inputRows
+	 * Get the number of columns in an output feature map.
 	 * @return
 	 */
-	public int getOutputRows(int inputRows) {
-		return (inputRows - kernels[0].rows) / skipRows + 1;
-	}
-	
-	/**
-	 * Get the number of columns in an output feature map, if the input feature map has
-	 * the given number of columns.
-	 * @param inputCols
-	 * @return
-	 */
-	public int getOutputColumns(int inputCols) {
-		return (inputCols - kernels[0].cols) / skipCols + 1;
+	public int getOutputColumns() {
+		return outputCols;
 	}
 
 	@Override
 	public Matrix[] feedForward(Matrix[] x) {
 		lastX = x;
-		Matrix[] y = new Matrix[x.length * kernels.length]; 
 		
 		int resultIndex = 0;
 		for(Matrix inputMap : x) {
-			int rows = getOutputRows(inputMap.rows), cols = getOutputColumns(inputMap.cols);
 			for(int k=0; k<kernels.length; k++) {
-				Matrix outMap = y[resultIndex++] = new Matrix(rows, cols);
-				for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
+				Matrix outMap = lastY[resultIndex++];
+				for(int r=0; r<outputRows; r++) for(int c=0; c<outputCols; c++) {
 					Matrix subMatrix = inputMap.subMatrix(r*skipRows, c*skipCols, kernels[k].rows, kernels[k].cols);
 					outMap.set(r, c, subMatrix.dot(kernels[k]) + biases.data[k]);
 				}
 			}
 		}
 		
-		return y;
+		return lastY;
 	}
 
 	@Override
@@ -140,5 +128,23 @@ public class ConvolutionalLayer implements Layer {
 		sb.append(" cols=");
 		sb.append(skipCols);
 		return sb.toString();
+	}
+
+	@Override
+	public Dimension prepare(Dimension inputDimension) throws IncompatibleLayerException {
+		outputRows = (inputDimension.rows - kernels[0].rows) / skipRows + 1;
+		if(outputRows < 1)
+			throw new IncompatibleLayerException("Given " + inputDimension + ", we would have " + outputRows + " output rows!");
+		
+		outputCols = (inputDimension.columns - kernels[0].cols) / skipCols + 1;
+		if(outputCols < 1)
+			throw new IncompatibleLayerException("Given " + inputDimension + ", we would have " + outputCols + " output columns!");
+		
+		lastY = new Matrix[inputDimension.depth * kernels.length];
+		for(int i=0; i<lastY.length; i++) {
+			lastY[i] = new Matrix(outputRows, outputCols);
+		}
+		
+		return new Dimension(outputRows, outputCols, inputDimension.depth * kernels.length);
 	}
 }

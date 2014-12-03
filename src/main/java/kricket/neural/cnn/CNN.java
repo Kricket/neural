@@ -4,6 +4,8 @@ import java.util.List;
 
 import kricket.neural.NNBase;
 import kricket.neural.util.Datum;
+import kricket.neural.util.Dimension;
+import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
 
@@ -19,13 +21,28 @@ public class CNN extends NNBase {
 	 * <p><b>Attention: </b>an EXTRA SigmaLayer will be added to the end!
 	 * @param opts
 	 * @param layers
+	 * @throws IncompatibleLayerException if the given layer configuration is inconsistent 
 	 */
-	public CNN(NNOptions opts, Layer ...layers) {
+	public CNN(NNOptions opts, Dimension inputDimension, Layer ...layers) throws IncompatibleLayerException {
 		super(opts);
+		
 		this.layers = new Layer[layers.length+1];
 		for(int i=0; i<layers.length; i++)
 			this.layers[i] = layers[i];
 		this.layers[layers.length] = new SigmaLayer();
+		
+		prepare(inputDimension);
+	}
+	
+	/**
+	 * Verify the consistency of the Layers, and perform any pre-run optimizations.
+	 * @param inputDimension
+	 * @throws IncompatibleLayerException
+	 */
+	private void prepare(Dimension inputDimension) throws IncompatibleLayerException {
+		for(Layer layer : layers) {
+			inputDimension = layer.prepare(inputDimension);
+		}
 	}
 	
 	@Override

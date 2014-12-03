@@ -1,5 +1,7 @@
 package kricket.neural.cnn;
 
+import kricket.neural.util.Dimension;
+import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.Matrix;
 
 /**
@@ -11,7 +13,7 @@ public class FullyConnectedLayer implements Layer {
 	/**
 	 * The parameters of this Layer.
 	 */
-	final Matrix weights, biases;
+	Matrix weights, biases;
 	/**
 	 * The last input received.
 	 */
@@ -21,13 +23,13 @@ public class FullyConnectedLayer implements Layer {
 	 */
 	Matrix dW, dB;
 	
+	private final int NEURONS;
+	
 	/**
-	 * @param inputLength The number of input values
-	 * @param outputLength The number of neurons in this Layer (= number of output values)
+	 * @param numNeurons The number of neurons in this layer.
 	 */
-	public FullyConnectedLayer(int inputLength, int outputLength) {
-		weights = Matrix.random(outputLength, inputLength);
-		biases = Matrix.random(outputLength, 1);
+	public FullyConnectedLayer(int numNeurons) {
+		NEURONS = numNeurons;
 	}
 	
 	@Override
@@ -74,5 +76,17 @@ public class FullyConnectedLayer implements Layer {
 	@Override
 	public String toString() {
 		return getClass().getSimpleName() + " (input " + weights.cols + " => output " + weights.rows + ")";
+	}
+
+	@Override
+	public Dimension prepare(Dimension inputDimension) throws IncompatibleLayerException {
+		if(inputDimension.depth != 1 || inputDimension.columns != 1)
+			throw new IncompatibleLayerException("A " + getClass().getSimpleName()
+					+ " can only accept a single column vector, not: " + inputDimension);
+
+		weights = Matrix.random(NEURONS, inputDimension.rows);
+		biases = Matrix.random(NEURONS, 1);
+		
+		return new Dimension(biases.rows, 1, 1);
 	}
 }
