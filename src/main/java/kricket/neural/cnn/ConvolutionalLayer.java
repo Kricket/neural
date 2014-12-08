@@ -97,12 +97,14 @@ public class ConvolutionalLayer implements Layer {
 
 	@Override
 	public void applyGradients(double regTerm, double scale) {
-		biases.plusEquals(dB.timesEquals(-scale));
+		// Since each kernel was repeated r*c times, we have to reduce the gradients by that much
+		scale = -scale / (outputRows * outputCols);
+		biases.plusEquals(dB.timesEquals(scale));
 		
 		for(int k=0; k<kernels.length; k++) {
 			if(regTerm != 0)
 				kernels[k].timesEquals(regTerm);
-			kernels[k].plusEquals(dK[k].timesEquals(-scale));
+			kernels[k].plusEquals(dK[k].timesEquals(scale));
 		}
 	}
 
