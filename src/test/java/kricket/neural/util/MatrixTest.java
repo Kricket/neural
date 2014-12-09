@@ -12,9 +12,14 @@ import org.junit.Test;
 
 public class MatrixTest {
 	
-	final double TOLERANCE = 0.00000000001;
+	public final static double TOLERANCE = 0.00000000001;
 	
-	private Matrix id(int dim) {
+	/**
+	 * Get the square ID matrix of the given size.
+	 * @param dim Number of rows and columns in the result.
+	 * @return
+	 */
+	public static Matrix id(int dim) {
 		Matrix id = new Matrix(dim, dim);
 		for(int i=0; i<dim; i++) {
 			id.set(i, i, 1);

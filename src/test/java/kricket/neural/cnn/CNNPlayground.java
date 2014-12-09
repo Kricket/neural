@@ -65,13 +65,17 @@ public class CNNPlayground {
 
 	@Test
 	public void simpleConv() throws IncompatibleLayerException {
+		ConvolutionalLayer cLayer = new ConvolutionalLayer(8, 3, 3, 2, 2);
+		MaxPoolingLayer mpLayer = new MaxPoolingLayer();
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
-				new ConvolutionalLayer(8, 3, 3, 2, 2),
+				cLayer,
+				mpLayer,
 				new FlatteningLayer(),
+				new SigmaLayer(),
 				new FullyConnectedLayer(30),
 				new SigmaLayer(),
 				new FullyConnectedLayer(10));
-		/*
+		
 		System.out.println("Augmenting images...");
 		List<Image> augmentedTraining = new ArrayList<>(trainingImages);
 		for(Image i : trainingImages) {
@@ -85,20 +89,20 @@ public class CNNPlayground {
 			augmentedTraining.add(i.rotate(-Math.PI/6));
 		}
 		System.gc();
-		*/
-		cnn.SGD(trainingImages, 10, 5, 0.5, 1);
+		
+		cnn.SGD(augmentedTraining, 10, 2, 0.5, 1);
 		
 		totals(cnn);
-		/*
+		
 		for(int i=0; i<5; i++) {
 			Image img = trainingImages.get(i);
 			System.out.println(img);
-			Matrix[] result = new ConvolutionalLayer(4, 3, 3, 2, 2).feedForward(new Matrix[] {img.getData()});
+			Matrix[] result = mpLayer.feedForward(cLayer.feedForward(new Matrix[] {img.getData()}));
 			for(int j=0; j<result.length; j++) {
 				System.out.println("Map " + j);
 				System.out.print(result[j].draw());
 			}
 		}
-		*/
+		
 	}
 }
