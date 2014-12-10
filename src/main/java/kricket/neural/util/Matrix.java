@@ -48,7 +48,7 @@ public class Matrix {
 	 * @param c
 	 * @param data
 	 */
-	public Matrix(int r, int c, double[] data) {
+	public Matrix(int r, int c, double... data) {
 		rows = r;
 		cols = c;
 		this.data = data;
@@ -352,20 +352,6 @@ public class Matrix {
 		return d;
 	}
 	
-	/**
-	 * Add a submatrix of m (scaled by the given factor) to this.
-	 * @param m
-	 * @param startRow
-	 * @param startCol
-	 * @param factor
-	 */
-	/*
-	public void plusEqualsSubMatrix(Matrix m, int startRow, int startCol, double factor) {
-		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
-			data[r*cols+c] += m.at(r+startRow, c+startCol) * factor;
-		}
-	}
-	*/
 	public String draw() {
 		double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
 		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
@@ -397,5 +383,14 @@ public class Matrix {
 			sb.append("\n");
 		}
 		return sb.toString();
+	}
+	
+	public double norm() {
+		double d = 0;
+		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
+			double e = at(r,c);
+			d += e*e;
+		}
+		return Math.sqrt(d);
 	}
 }

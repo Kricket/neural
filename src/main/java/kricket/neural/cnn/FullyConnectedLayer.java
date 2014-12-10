@@ -21,32 +21,46 @@ public class FullyConnectedLayer implements Layer {
 	/**
 	 * The running total of the calculated gradients of the weights and biases.
 	 */
-	Matrix dW, dB;
+	Matrix dW, dB, oldDW, oldDB;
 	
 	private final int NEURONS;
+	private final double MOMENTUM;
+	
+	/**
+	 * Initialize this layer (with 0 momentum).
+	 * @param numNeurons see {@link #FullyConnectedLayer(int, double)}
+	 */
+	public FullyConnectedLayer(int numNeurons) {
+		this(numNeurons, 0);
+	}
 	
 	/**
 	 * @param numNeurons The number of neurons in this layer.
+	 * @param momentum The momentum factor: how much of the previous gradient we conserve.
 	 */
-	public FullyConnectedLayer(int numNeurons) {
+	public FullyConnectedLayer(int numNeurons, double momentum) {
 		NEURONS = numNeurons;
+		MOMENTUM = momentum;
 	}
 	
 	@Override
 	public Matrix[] feedForward(Matrix[] x) {
+		/*
 		if(x.length != 1)
 			throw new IllegalArgumentException("You tried to send me " + x.length + " feature maps!");
 		if(x[0].data.length != weights.cols)
 			throw new IllegalArgumentException("Should have " + weights.cols + " inputs, but actually got " + x[0].data.length);
-		
+		*/
 		lastX = x[0];
 		return new Matrix[] {weights.times(lastX).plusEquals(biases)};
 	}
 
 	@Override
 	public Matrix[] backprop(Matrix[] deltas) {
+		/*
 		if(deltas[0].data.length != biases.data.length)
 			throw new IllegalArgumentException("Should have " + biases.rows + " deltas, but actually got " + deltas[0].data.length);
+		*/
 		
 		/*
 		 * backprop is actually two operations:
@@ -61,6 +75,8 @@ public class FullyConnectedLayer implements Layer {
 
 	@Override
 	public void resetGradients() {
+		oldDW = dW.timesEquals(MOMENTUM);
+		oldDB = dB.timesEquals(MOMENTUM);
 		dW = new Matrix(weights.rows, weights.cols);
 		dB = new Matrix(biases.rows, biases.cols);
 	}
@@ -71,6 +87,8 @@ public class FullyConnectedLayer implements Layer {
 			weights.timesEquals(regTerm);
 		weights.plusEquals(dW.timesEquals(-scale));
 		biases.plusEquals(dB.timesEquals(-scale));
+		weights.plusEquals(oldDW);
+		biases.plusEquals(oldDB);
 	}
 	
 	@Override
@@ -86,6 +104,9 @@ public class FullyConnectedLayer implements Layer {
 
 		weights = Matrix.random(NEURONS, inputDimension.rows);
 		biases = Matrix.random(NEURONS, 1);
+		
+		dW = new Matrix(weights.rows, weights.cols);
+		dB = new Matrix(biases.rows, biases.cols);
 		
 		return new Dimension(biases.rows, 1, 1);
 	}

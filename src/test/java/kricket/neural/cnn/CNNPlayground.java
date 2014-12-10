@@ -63,7 +63,7 @@ public class CNNPlayground {
 		totals(cnn);
 	}
 
-	@Test
+	//@Test
 	public void simpleConv() throws IncompatibleLayerException {
 		ConvolutionalLayer cLayer = new ConvolutionalLayer(8, 3, 3, 2, 2);
 		MaxPoolingLayer mpLayer = new MaxPoolingLayer();
@@ -103,6 +103,102 @@ public class CNNPlayground {
 				System.out.print(result[j].draw());
 			}
 		}
+	}
+	
+	//@Test
+	public void gradientMagnitudes() throws IncompatibleLayerException {
+		FullyConnectedLayer[] layers = new FullyConnectedLayer[] {
+				new FullyConnectedLayer(30),
+				new FullyConnectedLayer(30),
+				new FullyConnectedLayer(30),
+				new FullyConnectedLayer(30),
+				new FullyConnectedLayer(30),
+				new FullyConnectedLayer(30),
+				new FullyConnectedLayer(30),
+				new FullyConnectedLayer(10)
+		};
+		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
+				new FlatteningLayer(),
+				layers[0],
+				new SigmaLayer(),
+				layers[1],
+				new SigmaLayer(),
+				layers[2],
+				new SigmaLayer(),
+				layers[3],
+				new SigmaLayer(),
+				layers[4],
+				new SigmaLayer(),
+				layers[5],
+				new SigmaLayer(),
+				layers[6],
+				new SigmaLayer(),
+				layers[7]
+		);
+		cnn.SGD(testImages.subList(0, 1), 1, 5, .5, 0);
+		System.out.println("Norms:");
+		for(int i=0; i<layers.length; i++) {
+			System.out.println("Layer " + i + ": dW = " + layers[i].dW.norm() + " dB = " + layers[i].dB.norm());
+		}
+	}
+	
+	@Test
+	public void tryMomentum() throws IncompatibleLayerException {
+		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
+				new FlatteningLayer(),
+				new FullyConnectedLayer(100, .5),
+				new SigmaLayer(),
+				new FullyConnectedLayer(50, .25),
+				new SigmaLayer(),
+				new FullyConnectedLayer(30),
+				new SigmaLayer(),
+				new FullyConnectedLayer(10));
+		cnn.SGD(trainingImages, 10, 3, 0.5, 5);
 		
+		totals(cnn);
+	}
+	
+	//@Test
+	public void funWithAvg() {
+		Matrix[] avg = new Matrix[10];
+		int[] totals = new int[10];
+		double[] minDist = new double[10], maxDist = new double[10];
+		Image[] mins = new Image[10], maxs = new Image[10];
+		
+		for(int i=0; i<avg.length; i++) {
+			avg[i] = new Matrix(Image.HEIGHT, Image.WIDTH);
+			minDist[i] = Double.MAX_VALUE;
+		}
+		
+		for(Image i : testImages) {
+			totals[i.getAnswerAsByte()]++;
+			avg[i.getAnswerAsByte()].plusEquals(i.getData());
+		}
+		
+		for(int i=0; i<avg.length; i++) {
+			avg[i].timesEquals(1. / totals[i]);
+		}
+		
+		for(Image i : testImages) {
+			byte idx = i.getAnswerAsByte();
+			double dist = avg[idx].minus(i.getData()).norm();
+			if(dist < minDist[idx]) {
+				mins[idx] = i;
+				minDist[idx] = dist;
+			}
+			
+			if(dist > maxDist[idx]) {
+				maxs[idx] = i;
+				maxDist[idx] = dist;
+			}
+		}
+		
+		for(int i=0; i<avg.length; i++) {
+			System.out.println("closest for " + i);
+			System.out.println(mins[i].getData().draw());
+			System.out.println("farthest for " + i);
+			System.out.println(maxs[i].getData().draw());
+			
+		}
 	}
 }

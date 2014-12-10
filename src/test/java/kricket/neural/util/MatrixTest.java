@@ -222,20 +222,12 @@ public class MatrixTest {
 					TOLERANCE);
 		}
 	}
-	/*
+	
 	@Test
-	public void plusEqualsSubMatrix() {
-		Matrix id5 = id(5);
-		Matrix three2 = id(2).timesEquals(3);
-		
-		for(int r=0; r<3; r++) {
-			int c = r;
-			Matrix id2 = id(2);
-			id2.plusEqualsSubMatrix(id5, r, c, 2);
-			assertEquals("Submatrix at row " + r + ", col " + c,
-					three2,
-					id2);
+	public void norm() {
+		for(int i=1; i<10; i++) {
+			Matrix id = id(i);
+			assertEquals(Math.sqrt(i), id.norm(), TOLERANCE);
 		}
 	}
-	*/
 }
