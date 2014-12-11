@@ -2,6 +2,7 @@ package kricket.neural.mnist;
 
 import kricket.neural.util.Datum;
 import kricket.neural.util.Matrix;
+import kricket.neural.util.Tensor;
 
 public class Image implements Datum {
 
@@ -112,5 +113,15 @@ public class Image implements Datum {
 		}
 		
 		return img;
+	}
+
+	@Override
+	public Tensor getDataTensor() {
+		return new Tensor(data.rows, data.cols, 1, data.data);
+	}
+
+	@Override
+	public Tensor getAnswerTensor() {
+		return new Tensor(answer.rows, answer.cols, 1, answer.data);
 	}
 }

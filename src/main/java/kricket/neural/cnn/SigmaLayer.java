@@ -1,7 +1,7 @@
 package kricket.neural.cnn;
 
 import kricket.neural.util.Dimension;
-import kricket.neural.util.Matrix;
+import kricket.neural.util.Tensor;
 
 /**
  * A SigmaLayer is the equivalent of simply applying the sigma function on every entry
@@ -10,7 +10,7 @@ import kricket.neural.util.Matrix;
  */
 public class SigmaLayer implements Layer {
 	
-	private Matrix[] lastX, lastY;
+	private Tensor lastX, lastY;
 
 	/**
 	 * The smoothing function.
@@ -22,12 +22,12 @@ public class SigmaLayer implements Layer {
 	}
 	
 	/**
-	 * Set s = sigma(m), for each entry of m
+	 * Set s = sigma(m), for each entry of m. This will MODIFY s!
 	 * @param m
 	 * @param s
 	 * @return
 	 */
-	public static void sigma(Matrix m, Matrix s) {
+	public static void sigma(Tensor m, Tensor s) {
 		for(int i=0; i<s.data.length; i++)
 			s.data[i] = sigma(m.data[i]);
 	}
@@ -48,33 +48,25 @@ public class SigmaLayer implements Layer {
 	 * @param m
 	 * @return
 	 */
-	public static Matrix dSigma(Matrix m) {
+	public static Tensor dSigma(Tensor m) {
 		for(int i=0; i<m.data.length; i++)
 			m.data[i] = dSigma(m.data[i]);
 		return m;
 	}
 	
 	@Override
-	public Matrix[] feedForward(Matrix[] x) {
+	public Tensor feedForward(Tensor x) {
 		lastX = x;
-		for(int i=0; i<x.length; i++) {
-			sigma(x[i], lastY[i]);
-		}
+		sigma(x, lastY);
 		return lastY;
 	}
 
 	@Override
-	public Matrix[] backprop(Matrix[] deltas) {
-		if(deltas.length != lastX.length)
-			throw new IllegalArgumentException("Expected " + lastX.length + " deltas, but got " + deltas.length);
-		if(deltas[0].rows != lastX[0].rows)
-			throw new IllegalArgumentException("Expected " + lastX[0].rows + " rows, but got " + deltas[0].rows);
-		if(deltas[0].cols != lastX[0].cols)
-			throw new IllegalArgumentException("Expected " + lastX[0].cols + " cols, but got " + deltas[0].cols);
+	public Tensor backprop(Tensor deltas) {
+		if(!deltas.getDimension().equals(lastX.getDimension()))
+			throw new IllegalArgumentException();
 		
-		for(int d=0; d<deltas.length; d++) {
-			deltas[d].dotTimesEquals(dSigma(lastX[d]));
-		}
+		deltas.dotTimesEquals(dSigma(lastX));
 		return deltas;
 	}
 
@@ -90,9 +82,7 @@ public class SigmaLayer implements Layer {
 
 	@Override
 	public Dimension prepare(Dimension inputDimension) {
-		lastY = new Matrix[inputDimension.depth];
-		for(int i=0; i<lastY.length; i++)
-			lastY[i] = new Matrix(inputDimension.rows, inputDimension.columns);
+		lastY = new Tensor(inputDimension);
 		return inputDimension;
 	}
 

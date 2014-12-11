@@ -25,4 +25,14 @@ public class SingleDatum implements Datum {
 	public String toString() {
 		return "in: " + data.data[0] + " out: " + answer.data[0];
 	}
+
+	@Override
+	public Tensor getDataTensor() {
+		return new Tensor(data.data);
+	}
+
+	@Override
+	public Tensor getAnswerTensor() {
+		return new Tensor(answer.data);
+	}
 }

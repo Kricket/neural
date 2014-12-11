@@ -1,6 +1,6 @@
 package kricket.neural.cnn;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -8,11 +8,9 @@ import java.util.List;
 import kricket.neural.util.Datum;
 import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
-import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
 import kricket.neural.util.SingleDatum;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class CNNTest {
@@ -33,7 +31,7 @@ public class CNNTest {
 		
 		cnn.SGD(Arrays.asList(data), 1, 100, 5, 0);
 		
-		double forward = cnn.feedForward(data.getData())[0].data[0];
+		double forward = cnn.feedForward(data.getDataTensor()).data[0];
 		assertTrue("Actual value: " + forward, forward < 0.0021);
 	}
 	
@@ -44,7 +42,7 @@ public class CNNTest {
 		
 		cnn.SGD(Arrays.asList(data), 1, 100, 5, 0);
 		
-		double forward = cnn.feedForward(data.getData())[0].data[0];
+		double forward = cnn.feedForward(data.getDataTensor()).data[0];
 		assertTrue("Actual value: " + forward, forward < 0.0021);
 	}
 	
@@ -60,7 +58,7 @@ public class CNNTest {
 		
 		cnn.SGD(Arrays.asList(data), 1, 100, 5, 0);
 		
-		double forward = cnn.feedForward(data.getData())[0].data[0];
+		double forward = cnn.feedForward(data.getDataTensor()).data[0];
 		assertTrue("Actual value: " + forward, forward < 0.0011);
 	}
 	
@@ -71,9 +69,9 @@ public class CNNTest {
 		
 		cnn.SGD(data, 1, 100, 10, 0);
 		
-		double forward = cnn.feedForward(data.get(0).getData())[0].data[0];
+		double forward = cnn.feedForward(data.get(0).getDataTensor()).data[0];
 		assertTrue("Actual value: " + forward, forward < 0.0025);
-		forward = cnn.feedForward(data.get(1).getData())[0].data[0];
+		forward = cnn.feedForward(data.get(1).getDataTensor()).data[0];
 		assertTrue("Actual value: " + forward, forward > 0.99);
 	}
 	
@@ -84,9 +82,9 @@ public class CNNTest {
 		
 		cnn.SGD(data, 1, 100, 10, 0);
 		
-		double forward = cnn.feedForward(data.get(0).getData())[0].data[0];
+		double forward = cnn.feedForward(data.get(0).getDataTensor()).data[0];
 		assertTrue("Actual value: " + forward, forward < 0.0025);
-		forward = cnn.feedForward(data.get(1).getData())[0].data[0];
+		forward = cnn.feedForward(data.get(1).getDataTensor()).data[0];
 		assertTrue("Actual value: " + forward, forward > 0.99);
 	}
 	
@@ -112,6 +110,7 @@ public class CNNTest {
 	 * you treated the layer like a black-box function of its weights and biases.
 	 * @throws IncompatibleLayerException 
 	 */
+	/*
 	@Test @Ignore
 	public void handCheckGradients() throws IncompatibleLayerException {
 		FullyConnectedLayer layer = new FullyConnectedLayer(3);
@@ -165,4 +164,5 @@ public class CNNTest {
 	private void copy(Matrix target, Matrix source) {
 		System.arraycopy(source.data, 0, target.data, 0, source.data.length);
 	}
+	*/
 }

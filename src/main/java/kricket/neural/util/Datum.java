@@ -8,9 +8,11 @@ public interface Datum {
 	 * @return
 	 */
 	Matrix getData();
+	Tensor getDataTensor();
 	/**
 	 * The expected answer.
 	 * @return
 	 */
 	Matrix getAnswer();
+	Tensor getAnswerTensor();
 }

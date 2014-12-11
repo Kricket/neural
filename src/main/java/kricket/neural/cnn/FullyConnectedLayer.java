@@ -2,7 +2,7 @@ package kricket.neural.cnn;
 
 import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
-import kricket.neural.util.Matrix;
+import kricket.neural.util.Tensor;
 
 /**
  * A fully-connected layer contains a number of neurons. Each neuron's output is a
@@ -13,15 +13,15 @@ public class FullyConnectedLayer implements Layer {
 	/**
 	 * The parameters of this Layer.
 	 */
-	Matrix weights, biases;
+	Tensor weights, biases;
 	/**
 	 * The last input received.
 	 */
-	Matrix lastX;
+	Tensor lastX;
 	/**
 	 * The running total of the calculated gradients of the weights and biases.
 	 */
-	Matrix dW, dB, oldDW, oldDB;
+	Tensor dW, dB, oldDW, oldDB;
 	
 	private final int NEURONS;
 	private final double MOMENTUM;
@@ -44,41 +44,33 @@ public class FullyConnectedLayer implements Layer {
 	}
 	
 	@Override
-	public Matrix[] feedForward(Matrix[] x) {
-		/*
-		if(x.length != 1)
-			throw new IllegalArgumentException("You tried to send me " + x.length + " feature maps!");
-		if(x[0].data.length != weights.cols)
-			throw new IllegalArgumentException("Should have " + weights.cols + " inputs, but actually got " + x[0].data.length);
-		*/
-		lastX = x[0];
-		return new Matrix[] {weights.times(lastX).plusEquals(biases)};
+	public Tensor feedForward(Tensor x) {
+		lastX = x;
+		Tensor temp = new Tensor(weights.rows, lastX.cols, 1);
+		return weights.times(lastX, temp).plusEquals(biases);
 	}
 
 	@Override
-	public Matrix[] backprop(Matrix[] deltas) {
-		/*
-		if(deltas[0].data.length != biases.data.length)
-			throw new IllegalArgumentException("Should have " + biases.rows + " deltas, but actually got " + deltas[0].data.length);
-		*/
-		
+	public Tensor backprop(Tensor deltas) {
 		/*
 		 * backprop is actually two operations:
 		 * - calculate the derivatives wrt the weights and biases, and add them to dW and dB
 		 * - calculate the derivatives wrt the inputs, and return them
 		 */
-		dB.plusEquals(deltas[0]);
-		dW.plusEquals(deltas[0].timesTranspose(lastX));
+		Tensor temp = new Tensor(deltas.rows, lastX.rows, 1);
+		dB.plusEquals(deltas);
+		dW.plusEquals(deltas.timesTranspose(lastX, temp));
 		
-		return new Matrix[] {weights.transposeTimes(deltas[0])};
+		temp = new Tensor(weights.cols, deltas.cols, 1);
+		return weights.transposeTimes(deltas, temp);
 	}
 
 	@Override
 	public void resetGradients() {
 		oldDW = dW.timesEquals(MOMENTUM);
 		oldDB = dB.timesEquals(MOMENTUM);
-		dW = new Matrix(weights.rows, weights.cols);
-		dB = new Matrix(biases.rows, biases.cols);
+		dW = new Tensor(weights.rows, weights.cols, 1);
+		dB = new Tensor(biases.rows, biases.cols, 1);
 	}
 
 	@Override
@@ -102,11 +94,11 @@ public class FullyConnectedLayer implements Layer {
 			throw new IncompatibleLayerException("A " + getClass().getSimpleName()
 					+ " can only accept a single column vector, not: " + inputDimension);
 
-		weights = Matrix.random(NEURONS, inputDimension.rows);
-		biases = Matrix.random(NEURONS, 1);
+		weights = Tensor.random(NEURONS, inputDimension.rows, 1);
+		biases = Tensor.random(NEURONS, 1, 1);
 		
-		dW = new Matrix(weights.rows, weights.cols);
-		dB = new Matrix(biases.rows, biases.cols);
+		dW = new Tensor(weights.rows, weights.cols, 1);
+		dB = new Tensor(biases.rows, biases.cols, 1);
 		
 		return new Dimension(biases.rows, 1, 1);
 	}

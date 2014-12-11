@@ -6,8 +6,8 @@ import kricket.neural.NNBase;
 import kricket.neural.util.Datum;
 import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
-import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
+import kricket.neural.util.Tensor;
 
 public class CNN extends NNBase {
 
@@ -60,29 +60,20 @@ public class CNN extends NNBase {
 	 * @param x The initial feature maps.
 	 * @return
 	 */
-	public Matrix[] feedForward(Matrix[] x) {
+	public Tensor feedForward(Tensor x) {
 		for(Layer layer : layers) {
 			x = layer.feedForward(x);
 		}
 		return x;
 	}
 	
-	/**
-	 * Shortcut for {@link #feedForward(Matrix[])}
-	 * @param x
-	 * @return
-	 */
-	public Matrix[] feedForward(Matrix x) {
-		return feedForward(new Matrix[]{x});
-	}
-
 	@Override
 	protected void runBatch(List<? extends Datum> batch, double regTerm, double eta) {
 		for(Layer layer : layers)
 			layer.resetGradients();
 		
 		for(Datum dat : batch)
-			backprop(dat.getData(), dat.getAnswer());
+			backprop(dat.getDataTensor(), dat.getAnswerTensor());
 		
 		for(Layer layer : layers)
 			layer.applyGradients(regTerm, eta/batch.size());
@@ -93,9 +84,9 @@ public class CNN extends NNBase {
 	 * @param x
 	 * @param y
 	 */
-	private void backprop(Matrix x, Matrix y) {
-		Matrix[] forward = feedForward(x);
-		Matrix[] deltas = new Matrix[] {forward[0].minus(y)};
+	private void backprop(Tensor x, Tensor y) {
+		Tensor forward = feedForward(x);
+		Tensor deltas = forward.minus(y);
 		
 		// The cross-entropy cost function basically boils down to not running
 		// backpropagation on the last (sigmoid) layer. If we instead wanted
@@ -110,12 +101,12 @@ public class CNN extends NNBase {
 	public double calc_error(List<? extends Datum> data) {
 		double numCorrect = 0;
 		for(Datum dat : data) {
-			Matrix[] result = feedForward(dat.getData());
-			if(isCorrect(result[0], dat.getAnswer())) {
+			Tensor result = feedForward(dat.getDataTensor());
+			if(isCorrect(result.data, dat.getAnswer().data)) {
 				numCorrect++;
 			} else if(options.logIncorrectAnswers) {
 				options.log.info("Got this one wrong:\n" + dat);
-				for(double d : result[0].data)
+				for(double d : result.data)
 					options.log.info(String.format("%.3f", d));
 			}
 		}

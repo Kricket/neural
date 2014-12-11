@@ -2,7 +2,7 @@ package kricket.neural.cnn;
 
 import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
-import kricket.neural.util.Matrix;
+import kricket.neural.util.Tensor;
 
 /**
  * A max-pooling layer combines a list of feature maps into a single map by simply selecting
@@ -11,9 +11,10 @@ import kricket.neural.util.Matrix;
 public class MaxPoolingLayer implements Layer {
 	
 	/**
-	 * Cache, to avoid re-allocating matrices on each run.
+	 * Cache, to avoid re-allocating tensors on each run.
 	 */
-	private Matrix[] lastY, delta;
+	private Tensor lastY;
+	private int inputDepth;
 	/**
 	 * Indices of which kernel map had the max value for each pixel.
 	 * I.e., if x[3] had the max value for the pixel at (r=2, c=5), then
@@ -22,31 +23,29 @@ public class MaxPoolingLayer implements Layer {
 	private int[][] maxIndices;
 
 	@Override
-	public Matrix[] feedForward(Matrix[] x) {
-		for(int r=0; r<lastY[0].rows; r++) for(int c=0; c<lastY[0].cols; c++) {
+	public Tensor feedForward(Tensor x) {
+		for(int r=0; r<lastY.rows; r++) for(int c=0; c<lastY.cols; c++) {
 			double max = Double.MIN_VALUE;
-			for(int i=0; i<x.length; i++) {
-				double d = x[i].at(r, c);
+			for(int i=0; i<x.depth; i++) {
+				double d = x.at(r, c, i);
 				if(d > max) {
 					max = d;
 					maxIndices[r][c] = i;
 				}
 			}
 			
-			lastY[0].set(r, c, max);
+			lastY.set(r, c, 0, max);
 		}
 		return lastY;
 	}
 
 	@Override
-	public Matrix[] backprop(Matrix[] deltas) {
-		// The easiest way to zero out the matrices...?
-		for(int i=0; i<delta.length; i++) {
-			delta[i] = new Matrix(deltas[0].rows, deltas[0].cols);
-		}
+	public Tensor backprop(Tensor deltas) {
+		// The easiest way to zero out the tensor...?
+		Tensor delta = new Tensor(deltas.rows, deltas.cols, inputDepth);
 		
-		for(int r=0; r<deltas[0].rows; r++) for(int c=0; c<deltas[0].cols; c++) {
-			delta[maxIndices[r][c]].set(r, c, deltas[0].at(r, c));
+		for(int r=0; r<deltas.rows; r++) for(int c=0; c<deltas.cols; c++) {
+			delta.set(r, c, maxIndices[r][c], deltas.at(r, c, 0));
 		}
 		
 		return delta;
@@ -64,8 +63,8 @@ public class MaxPoolingLayer implements Layer {
 
 	@Override
 	public Dimension prepare(Dimension inputDimension) throws IncompatibleLayerException {
-		lastY = new Matrix[] {new Matrix(inputDimension.rows, inputDimension.columns)};
-		delta = new Matrix[inputDimension.depth];
+		lastY = new Tensor(inputDimension.rows, inputDimension.columns, 1);
+		inputDepth = inputDimension.depth;
 		maxIndices = new int[inputDimension.rows][];
 		for(int i=0; i<maxIndices.length; i++)
 			maxIndices[i] = new int[inputDimension.columns];

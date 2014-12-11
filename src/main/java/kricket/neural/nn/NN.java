@@ -207,7 +207,7 @@ public class NN extends NNBase {
 		double numCorrect = 0;
 		for(Datum dat : data) {
 			Matrix result = feedForward(dat.getData());
-			if(isCorrect(result, dat.getAnswer())) {
+			if(isCorrect(result.data, dat.getAnswer().data)) {
 				numCorrect++;
 			} else if(options.logIncorrectAnswers) {
 				options.log.info("Got this one wrong:\n" + dat);

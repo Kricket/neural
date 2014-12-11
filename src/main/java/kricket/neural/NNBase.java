@@ -3,7 +3,6 @@ package kricket.neural;
 import java.util.List;
 
 import kricket.neural.util.Datum;
-import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
 
 public abstract class NNBase {
@@ -71,15 +70,15 @@ public abstract class NNBase {
 	 */
 	public abstract double calc_error(List<? extends Datum> data);
 	
-	protected boolean isCorrect(Matrix result, Matrix answer) {
+	protected boolean isCorrect(double[] result, double[] answer) {
 		int guess = 0;
-		double max = result.data[0];
-		for(int i=1; i<result.data.length; i++) {
-			if(result.data[i] > max) {
-				max = result.data[i];
+		double max = result[0];
+		for(int i=1; i<result.length; i++) {
+			if(result[i] > max) {
+				max = result[i];
 				guess = i;
 			}
 		}
-		return answer.data[guess] > 0.99;
+		return answer[guess] > 0.99;
 	}
 }

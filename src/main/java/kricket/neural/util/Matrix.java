@@ -317,25 +317,6 @@ public class Matrix {
 		
 		return true;
 	}
-	
-	/**
-	 * Get the sub-matrix of this Matrix at the given coordinates.
-	 * @param startRow
-	 * @param startCol
-	 * @param sRows rowspan of the sub-matrix
-	 * @param sCols colspan of the sub-matrix
-	 * @return
-	 */
-	public Matrix subMatrix(int startRow, int startCol, int sRows, int sCols) {
-		/*
-		if(startRow+sRows > rows || startCol+sCols > cols)
-			throw new IllegalArgumentException("Illegal submatrix: I am " + rows + "x" + cols
-					+ " and you wanted " + sRows + "x" + sCols
-					+ " starting at " + startRow + "," + startCol);
-		*/
-		return new SubMatrix(this, sRows, sCols, startRow, startCol);
-	}
-	
 	/**
 	 * Sum of the elementwise products of this and the given Matrix.
 	 * @param m

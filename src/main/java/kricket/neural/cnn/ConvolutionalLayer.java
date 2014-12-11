@@ -2,7 +2,8 @@ package kricket.neural.cnn;
 
 import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
-import kricket.neural.util.Matrix;
+import kricket.neural.util.SubTensor;
+import kricket.neural.util.Tensor;
 
 /**
  * A convolutional layer is composed of one or more kernels. Each kernel is a small, rectangular
@@ -11,24 +12,17 @@ import kricket.neural.util.Matrix;
  */
 public class ConvolutionalLayer implements Layer {
 	
-	private final Matrix[] kernels;
-	private final Matrix biases;
+	private final Tensor kernels, biases;
 	private final int skipCols, skipRows;
-	private Matrix[] lastX, lastY;
-	private Matrix[] dK;
-	private Matrix dB;
+	private Tensor lastX, lastY;
+	private Tensor dK, dB;
 	private int outputRows, outputCols;
 	
 	public ConvolutionalLayer(int numKernels, int kernelWidth, int kernelHeight, int skipColmuns, int skipRows) {
-		kernels = new Matrix[numKernels];
-		biases = Matrix.random(numKernels, 1);
-		for(int i=0; i<numKernels; i++) {
-			kernels[i] = Matrix.random(kernelHeight, kernelWidth);
-		}
+		kernels = Tensor.random(kernelHeight, kernelWidth, numKernels);
+		biases = Tensor.random(numKernels, 1, 1);
 		this.skipCols = skipColmuns;
 		this.skipRows = skipRows;
-		
-		dK = new Matrix[numKernels];
 	}
 	
 	/**
@@ -48,17 +42,21 @@ public class ConvolutionalLayer implements Layer {
 	}
 
 	@Override
-	public Matrix[] feedForward(Matrix[] x) {
+	public Tensor feedForward(Tensor x) {
 		lastX = x;
 		
-		int resultIndex = 0;
-		for(Matrix inputMap : x) {
-			for(int k=0; k<kernels.length; k++) {
-				Matrix outMap = lastY[resultIndex++];
+		// Each kernel is basically like the weights of a single neuron of a fully-connected layer.
+		// We iterate over the input maps, and apply the kernels (weights) to the sub-maps, + biases,
+		// to get the output pixel value.
+		int ySlice = 0;
+		for(int s=0; s<x.depth; s++) {
+			for(int k=0; k<kernels.depth; k++) {
 				for(int r=0; r<outputRows; r++) for(int c=0; c<outputCols; c++) {
-					Matrix subMatrix = inputMap.subMatrix(r*skipRows, c*skipCols, kernels[k].rows, kernels[k].cols);
-					outMap.set(r, c, subMatrix.dot(kernels[k]) + biases.data[k]);
+					SubTensor subMatrix = x.subMatrix(r*skipRows, c*skipCols, s, kernels.rows, kernels.cols);
+					double weighted = subMatrix.innerProduct(kernels, k);
+					lastY.set(r, c, ySlice, weighted + biases.data[k]);
 				}
+				ySlice++;
 			}
 		}
 		
@@ -66,15 +64,33 @@ public class ConvolutionalLayer implements Layer {
 	}
 
 	@Override
-	public Matrix[] backprop(Matrix[] deltas) {
-		if(deltas.length != kernels.length * lastX.length)
-			throw new IllegalArgumentException("Should have " + (kernels.length * lastX.length)
-					+ " deltas, but there are " + deltas.length);
-		
+	public Tensor backprop(Tensor deltas) {
 		// The idea here is: since each kernel is basically like a single fully-connected neuron,
 		// we simply repeat the feedforward loops to pair up the kernels with the sub-images
-		// where they are applied.
-		Matrix[] back = new Matrix[lastX.length];
+		// where they are applied. The backpropagated deltas are the kernels, and the dKs are
+		// the original sub-matrices.
+		Tensor back = new Tensor(lastX.rows, lastX.cols, lastX.depth);
+		for(int s=0; s<lastX.depth; s++) {
+			for(int r=0; r<deltas.rows; r++) for(int c=0; c<deltas.cols; c++) {
+				// deltas[r,c,deltaSlice] = the error of kernel[k] when applied to x[s] at (r*skip, c*skip)
+				
+				SubTensor subX = lastX.subMatrix(r*skipRows, c*skipCols, s, kernels.rows, kernels.cols);
+				SubTensor subBack = back.subMatrix(r*skipRows, c*skipCols, s, kernels.rows, kernels.cols);
+				
+				for(int k=0; k<kernels.depth; k++) {
+					int deltaSlice = s*lastX.depth + k;
+					double delta = deltas.at(r, c, deltaSlice);
+					dB.data[k] += delta;
+					
+					// dX/dK = K
+					subBack.plusEqualsSliceTimes(kernels, k, delta);
+					
+					// dK/dX = X
+					dK.subMatrix(0, 0, k, dK.rows, dK.cols).plusEqualsTimes(subX, delta);
+				}
+			}
+		}
+		/*
 		for(int i=0; i<lastX.length; i++) {
 			back[i] = new Matrix(lastX[i].rows, lastX[i].cols);
 			for(int k=0; k<kernels.length; k++) {
@@ -91,7 +107,7 @@ public class ConvolutionalLayer implements Layer {
 				}
 			}
 		}
-		
+		*/
 		return back;
 	}
 
@@ -101,29 +117,26 @@ public class ConvolutionalLayer implements Layer {
 		scale = -scale / (outputRows * outputCols);
 		biases.plusEquals(dB.timesEquals(scale));
 		
-		for(int k=0; k<kernels.length; k++) {
-			if(regTerm != 0)
-				kernels[k].timesEquals(regTerm);
-			kernels[k].plusEquals(dK[k].timesEquals(scale));
-		}
+		if(regTerm != 0)
+			kernels.timesEquals(regTerm);
+		kernels.plusEquals(dK.timesEquals(scale));
 	}
 
 	@Override
 	public void resetGradients() {
-		dB = new Matrix(biases.rows, biases.cols);
-		for(int i=0; i<dK.length; i++)
-			dK[i] = new Matrix(kernels[i].rows, kernels[i].cols);
+		dB = new Tensor(biases.rows, biases.cols, 1);
+		dK = new Tensor(kernels.rows, kernels.cols, kernels.depth);
 	}
 	
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(getClass().getSimpleName());
 		sb.append("\n");
-		for(int k=0; k<kernels.length; k++) {
+		for(int k=0; k<kernels.depth; k++) {
 			sb.append("Kernel ");
 			sb.append(k);
 			sb.append("\n");
-			sb.append(kernels[k].draw());
+			sb.append(kernels.draw(k));
 		}
 		sb.append("skip rows=");
 		sb.append(skipRows);
@@ -134,19 +147,16 @@ public class ConvolutionalLayer implements Layer {
 
 	@Override
 	public Dimension prepare(Dimension inputDimension) throws IncompatibleLayerException {
-		outputRows = (inputDimension.rows - kernels[0].rows) / skipRows + 1;
+		outputRows = (inputDimension.rows - kernels.rows) / skipRows + 1;
 		if(outputRows < 1)
 			throw new IncompatibleLayerException("Given " + inputDimension + ", we would have " + outputRows + " output rows!");
 		
-		outputCols = (inputDimension.columns - kernels[0].cols) / skipCols + 1;
+		outputCols = (inputDimension.columns - kernels.cols) / skipCols + 1;
 		if(outputCols < 1)
 			throw new IncompatibleLayerException("Given " + inputDimension + ", we would have " + outputCols + " output columns!");
 		
-		lastY = new Matrix[inputDimension.depth * kernels.length];
-		for(int i=0; i<lastY.length; i++) {
-			lastY[i] = new Matrix(outputRows, outputCols);
-		}
+		lastY = new Tensor(outputRows, outputCols, inputDimension.depth * kernels.depth);
 		
-		return new Dimension(outputRows, outputCols, inputDimension.depth * kernels.length);
+		return lastY.getDimension();
 	}
 }

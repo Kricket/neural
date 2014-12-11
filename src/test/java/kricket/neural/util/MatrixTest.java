@@ -208,22 +208,6 @@ public class MatrixTest {
 	}
 	
 	@Test
-	public void subMatrixDot() {
-		Matrix id2 = id(2), id5 = id(5);
-		for(int r=0; r<3; r++) for(int c = 0; c<3; c++) {
-			Matrix subMatrix = id5.subMatrix(r, c, 2, 2);
-			assertEquals("Submatrix at row " + r + ", col " + c,
-					(r == c ? 2 : 0),
-					subMatrix.dot(id2),
-					TOLERANCE);
-			assertEquals("Submatrix at row " + r + ", col " + c,
-					(r == c ? 2 : 0),
-					id2.dot(subMatrix),
-					TOLERANCE);
-		}
-	}
-	
-	@Test
 	public void norm() {
 		for(int i=1; i<10; i++) {
 			Matrix id = id(i);
