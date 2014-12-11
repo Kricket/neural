@@ -79,8 +79,10 @@ public class Tensor {
 	 * @return
 	 */
 	public int index(int row, int col, int slice) {
+		/*
 		if(row >= rows || col >= cols || slice >= depth)
 			throw new IllegalArgumentException("row " + row + " col " + col + " slice " + slice);
+		*/
 		return slice*rows*cols + row*cols + col;
 	}
 
@@ -112,7 +114,7 @@ public class Tensor {
 	 * @return
 	 */
 	public Tensor minus(Tensor t) {
-		checkDimensions(t);
+		//checkDimensions(t);
 		
 		Tensor result = new Tensor(rows, cols, depth);
 		for(int i=0; i<data.length; i++)
@@ -125,7 +127,7 @@ public class Tensor {
 	 * @param t
 	 */
 	public void dotTimesEquals(Tensor t) {
-		checkDimensions(t);
+		//checkDimensions(t);
 		
 		for(int i=0; i<data.length; i++) {
 			data[i] *= t.data[i];
@@ -138,7 +140,7 @@ public class Tensor {
 	 * @return this
 	 */
 	public Tensor plusEquals(Tensor t) {
-		checkDimensions(t);
+		//checkDimensions(t);
 		for(int i=0; i<data.length; i++) {
 			data[i] += t.data[i];
 		}
@@ -163,6 +165,7 @@ public class Tensor {
 	 * @return The given result (for convenience).
 	 */
 	public Tensor timesTranspose(Tensor t, Tensor result) {
+		/*
 		if(t.depth != depth)
 			throw new IllegalArgumentException("I am " + depth + " deep, but t is " + t.depth);
 		if(result.depth != depth)
@@ -171,6 +174,7 @@ public class Tensor {
 			throw new IllegalArgumentException("I have " + cols + " cols, but t has " + t.cols);
 		if(result.rows != rows || result.cols != t.rows)
 			throw new IllegalArgumentException("Incompatible dimensions");
+		*/
 		
 		for(int s=0; s<depth; s++) {
 			for(int r=0; r<rows; r++) {
@@ -195,6 +199,7 @@ public class Tensor {
 	 * @return The given result (for convenience).
 	 */
 	public Tensor transposeTimes(Tensor t, Tensor result) {
+		/*
 		if(t.depth != depth)
 			throw new IllegalArgumentException("I am " + depth + " deep, but t is " + t.depth);
 		if(result.depth != depth)
@@ -203,6 +208,7 @@ public class Tensor {
 			throw new IllegalArgumentException("I have " + cols + " cols, but t has " + t.cols);
 		if(result.rows != cols || result.cols != t.cols)
 			throw new IllegalArgumentException("Incompatible dimensions");
+		*/
 		
 		for(int s=0; s<depth; s++) {
 			for(int r=0; r<cols; r++) {
@@ -227,11 +233,12 @@ public class Tensor {
 	 * @return The given result (for convenience).
 	 */
 	public Tensor times(Tensor t, Tensor result) {
+		/*
 		if(t.depth != depth || t.rows != cols)
 			throw new IllegalArgumentException("Bad tensor dimension: I am " + getDimension() + ", t is " + t.getDimension());
 		if(rows != result.rows || t.cols != result.cols || result.depth != depth)
 			throw new IllegalArgumentException("Bad result dimension");
-		
+		*/
 		for(int s=0; s<depth; s++) {
 			for(int r=0; r<rows; r++) {
 				for(int c=0; c<t.cols; c++) {
@@ -254,8 +261,7 @@ public class Tensor {
 	 */
 	public Tensor copy() {
 		Tensor t = new Tensor(rows, cols, depth);
-		for(int i=0; i<data.length; i++)
-			t.data[i] = data[i];
+		System.arraycopy(data, 0, t.data, 0, data.length);
 		return t;
 	}
 

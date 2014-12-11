@@ -52,19 +52,19 @@ public class CNNPlayground {
 		System.out.println(cnn);
 	}
 	
-	//@Test
+	@Test
 	public void equivalentToNN() throws IncompatibleLayerException {
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
 				new FlatteningLayer(),
 				new FullyConnectedLayer(30),
 				new SigmaLayer(),
 				new FullyConnectedLayer(10));
-		cnn.SGD(trainingImages, 10, 3, 0.5, 5);
+		cnn.SGD(trainingImages, 10, 15, 0.5, 5);
 		
 		totals(cnn);
 	}
 
-	@Test
+	//@Test
 	public void simpleConv() throws IncompatibleLayerException {
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
 				new ConvolutionalLayer(4, 3, 3, 2, 2),

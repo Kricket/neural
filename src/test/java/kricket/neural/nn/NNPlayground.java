@@ -50,7 +50,7 @@ public class NNPlayground {
 	@Test
 	public void standard() {
 		NN nn = new NN(getOpts(), IMGSIZE, 30, 10);
-		nn.SGD(trainingImages, 10, 3, 0.5, 5);
+		nn.SGD(trainingImages, 10, 15, 0.5, 5);
 		
 		totals(nn);
 	}

@@ -90,24 +90,7 @@ public class ConvolutionalLayer implements Layer {
 				}
 			}
 		}
-		/*
-		for(int i=0; i<lastX.length; i++) {
-			back[i] = new Matrix(lastX[i].rows, lastX[i].cols);
-			for(int k=0; k<kernels.length; k++) {
-				Matrix delta = deltas[i*lastX.length + k];
-				// delta(r,c) = the error for kernel k applied to x[i] at (r*skip, c*skip)
-				for(int r=0; r<delta.rows; r++) for(int c=0; c<delta.cols; c++) {
-					dB.data[k] += delta.at(r, c);
-					
-					Matrix xSubMatrix = lastX[i].subMatrix(r*skipRows, c*skipCols, kernels[k].rows, kernels[k].cols);
-					dK[k].plusEquals(xSubMatrix.copy().timesEquals(delta.at(r,c)));
-					
-					Matrix backSubMatrix = back[i].subMatrix(r*skipRows, c*skipCols, kernels[k].rows, kernels[k].cols);
-					backSubMatrix.plusEquals(kernels[k]);
-				}
-			}
-		}
-		*/
+		
 		return back;
 	}
 

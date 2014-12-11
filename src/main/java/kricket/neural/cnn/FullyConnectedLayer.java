@@ -23,6 +23,10 @@ public class FullyConnectedLayer implements Layer {
 	 */
 	Tensor dW, dB, oldDW, oldDB;
 	
+	/**
+	 * Temp values, to avoid re-allocating.
+	 */
+	private Tensor dT_times_x, wT_times_d;
 	private final int NEURONS;
 	private final double MOMENTUM;
 	
@@ -57,12 +61,10 @@ public class FullyConnectedLayer implements Layer {
 		 * - calculate the derivatives wrt the weights and biases, and add them to dW and dB
 		 * - calculate the derivatives wrt the inputs, and return them
 		 */
-		Tensor temp = new Tensor(deltas.rows, lastX.rows, 1);
 		dB.plusEquals(deltas);
-		dW.plusEquals(deltas.timesTranspose(lastX, temp));
+		dW.plusEquals(deltas.timesTranspose(lastX, dT_times_x));
 		
-		temp = new Tensor(weights.cols, deltas.cols, 1);
-		return weights.transposeTimes(deltas, temp);
+		return weights.transposeTimes(deltas, wT_times_d);
 	}
 
 	@Override
@@ -85,7 +87,14 @@ public class FullyConnectedLayer implements Layer {
 	
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + " (input " + weights.cols + " => output " + weights.rows + ")";
+		return getClass().getSimpleName()
+				+ " (input "
+				+ weights.cols
+				+ " => output "
+				+ weights.rows
+				+ ", momentum="
+				+ MOMENTUM
+				+ ")";
 	}
 
 	@Override
@@ -98,7 +107,10 @@ public class FullyConnectedLayer implements Layer {
 		biases = Tensor.random(NEURONS, 1, 1);
 		
 		dW = new Tensor(weights.rows, weights.cols, 1);
-		dB = new Tensor(biases.rows, biases.cols, 1);
+		dB = new Tensor(NEURONS, 1, 1);
+		
+		dT_times_x = new Tensor(NEURONS, inputDimension.rows, 1);
+		wT_times_d = new Tensor(weights.cols, 1, 1);
 		
 		return new Dimension(biases.rows, 1, 1);
 	}
