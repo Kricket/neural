@@ -10,7 +10,6 @@ import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.Matrix;
 import kricket.neural.util.NNOptions;
-import kricket.neural.util.Tensor;
 
 import org.junit.After;
 import org.junit.Before;
@@ -59,9 +58,27 @@ public class CNNPlayground {
 				new FullyConnectedLayer(30),
 				new SigmaLayer(),
 				new FullyConnectedLayer(10));
-		cnn.SGD(trainingImages, 10, 15, 0.5, 5);
+		cnn.SGD(trainingImages, 10, 3, 0.5, 5);
+		cnn.SGD(trainingImages, 10, 3, 0.25, 2.5);
 		
 		totals(cnn);
+	}
+	
+	public static List<Image> augment(List<Image> original) {
+		System.out.println("Augmenting images...");
+		List<Image> augmented = new ArrayList<>(original);
+		for(Image i : original) {
+			augmented.add(i.rotate(Math.PI/6));
+			
+			augmented.add(i.shift(-3, -3));
+			augmented.add(i.shift(3, -3));
+			augmented.add(i.shift(-3, 3));
+			augmented.add(i.shift(3, 3));
+			
+			augmented.add(i.rotate(-Math.PI/6));
+		}
+		System.gc();
+		return augmented;
 	}
 
 	//@Test
@@ -75,21 +92,7 @@ public class CNNPlayground {
 				new SigmaLayer(),
 				new FullyConnectedLayer(10)
 		);
-		/*
-		System.out.println("Augmenting images...");
-		List<Image> augmentedTraining = new ArrayList<>(trainingImages);
-		for(Image i : trainingImages) {
-			augmentedTraining.add(i.rotate(Math.PI/6));
-			
-			augmentedTraining.add(i.shift(-3, -3));
-			augmentedTraining.add(i.shift(3, -3));
-			augmentedTraining.add(i.shift(-3, 3));
-			augmentedTraining.add(i.shift(3, 3));
-			
-			augmentedTraining.add(i.rotate(-Math.PI/6));
-		}
-		System.gc();
-		*/
+		
 		cnn.SGD(trainingImages, 10, 5, 0.5, 1);
 		
 		totals(cnn);
@@ -104,43 +107,6 @@ public class CNNPlayground {
 			}
 		}
 		*/
-	}
-	
-	//@Test
-	public void gradientMagnitudes() throws IncompatibleLayerException {
-		FullyConnectedLayer[] layers = new FullyConnectedLayer[] {
-				new FullyConnectedLayer(30),
-				new FullyConnectedLayer(30),
-				new FullyConnectedLayer(30),
-				new FullyConnectedLayer(30),
-				new FullyConnectedLayer(30),
-				new FullyConnectedLayer(30),
-				new FullyConnectedLayer(30),
-				new FullyConnectedLayer(10)
-		};
-		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
-				new FlatteningLayer(),
-				layers[0],
-				new SigmaLayer(),
-				layers[1],
-				new SigmaLayer(),
-				layers[2],
-				new SigmaLayer(),
-				layers[3],
-				new SigmaLayer(),
-				layers[4],
-				new SigmaLayer(),
-				layers[5],
-				new SigmaLayer(),
-				layers[6],
-				new SigmaLayer(),
-				layers[7]
-		);
-		cnn.SGD(testImages.subList(0, 1), 1, 5, .5, 0);
-		System.out.println("Norms:");
-		for(int i=0; i<layers.length; i++) {
-			System.out.println("Layer " + i + ": dW = " + layers[i].dW.norm() + " dB = " + layers[i].dB.norm());
-		}
 	}
 	
 	//@Test

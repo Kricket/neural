@@ -13,15 +13,15 @@ public class FullyConnectedLayer implements Layer {
 	/**
 	 * The parameters of this Layer.
 	 */
-	Tensor weights, biases;
+	private Tensor weights, biases;
 	/**
-	 * The last input received.
+	 * The last input and output.
 	 */
-	Tensor lastX;
+	private Tensor lastX, lastY;
 	/**
 	 * The running total of the calculated gradients of the weights and biases.
 	 */
-	Tensor dW, dB, oldDW, oldDB;
+	private Tensor dW, dB, oldDW, oldDB;
 	
 	/**
 	 * Temp values, to avoid re-allocating.
@@ -50,8 +50,7 @@ public class FullyConnectedLayer implements Layer {
 	@Override
 	public Tensor feedForward(Tensor x) {
 		lastX = x;
-		Tensor temp = new Tensor(weights.rows, lastX.cols, 1);
-		return weights.times(lastX, temp).plusEquals(biases);
+		return weights.times(lastX, lastY).plusEquals(biases);
 	}
 
 	@Override
@@ -111,6 +110,7 @@ public class FullyConnectedLayer implements Layer {
 		
 		dT_times_x = new Tensor(NEURONS, inputDimension.rows, 1);
 		wT_times_d = new Tensor(weights.cols, 1, 1);
+		lastY = new Tensor(weights.rows, 1, 1);
 		
 		return new Dimension(biases.rows, 1, 1);
 	}
