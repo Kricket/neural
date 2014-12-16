@@ -12,28 +12,28 @@ public class Tensor {
 	/**
 	 * The dimensions of this Tensor.
 	 */
-	public final int rows, cols, depth;
+	public final int rows, cols, slices;
 	
 	/**
 	 * Get a Tensor filled with random values between -1 and 1.
 	 * @param r
 	 * @param c
-	 * @param d
+	 * @param s
 	 * @return
 	 */
-	public static Tensor random(int r, int c, int d) {
-		Tensor t = new Tensor(r,c,d);
+	public static Tensor random(int r, int c, int s) {
+		Tensor t = new Tensor(r,c,s);
 		for(int i=0; i<t.data.length; i++) {
 			t.data[i] = Math.random() - Math.random();
 		}
 		return t;
 	}
 	
-	public Tensor(int r, int c, int d, double[] dat) {
+	public Tensor(int r, int c, int s, double[] dat) {
 		data = dat;
 		rows = r;
 		cols = c;
-		depth = d;
+		slices = s;
 	}
 	
 	/**
@@ -48,10 +48,10 @@ public class Tensor {
 	 * Create a Tensor with all 0 entries.
 	 * @param r
 	 * @param c
-	 * @param d
+	 * @param s
 	 */
-	public Tensor(int r, int c, int d) {
-		this(r,c,d,new double[r*c*d]);
+	public Tensor(int r, int c, int s) {
+		this(r,c,s,new double[r*c*s]);
 	}
 	
 	public Tensor(Dimension dim) {
@@ -63,11 +63,11 @@ public class Tensor {
 	}
 
 	public Dimension getDimension() {
-		return new Dimension(rows, cols, depth);
+		return new Dimension(rows, cols, slices);
 	}
 	
 	private void checkDimensions(Tensor t) {
-		if(rows != t.rows || cols != t.cols || depth != t.depth)
+		if(rows != t.rows || cols != t.cols || slices != t.slices)
 			throw new IllegalArgumentException("Incompatible dimensions: I am " + getDimension() + ", t is " + t.getDimension());
 	}
 	
@@ -116,7 +116,7 @@ public class Tensor {
 	public Tensor minus(Tensor t) {
 		//checkDimensions(t);
 		
-		Tensor result = new Tensor(rows, cols, depth);
+		Tensor result = new Tensor(rows, cols, slices);
 		for(int i=0; i<data.length; i++)
 			result.data[i] = data[i] - t.data[i];
 		return result;
@@ -176,7 +176,7 @@ public class Tensor {
 			throw new IllegalArgumentException("Incompatible dimensions");
 		*/
 		
-		for(int s=0; s<depth; s++) {
+		for(int s=0; s<slices; s++) {
 			for(int r=0; r<rows; r++) {
 				for(int c=0; c<t.rows; c++) {
 					// this.row[r] . t.row[c]
@@ -210,7 +210,7 @@ public class Tensor {
 			throw new IllegalArgumentException("Incompatible dimensions");
 		*/
 		
-		for(int s=0; s<depth; s++) {
+		for(int s=0; s<slices; s++) {
 			for(int r=0; r<cols; r++) {
 				for(int c=0; c<t.cols; c++) {
 					// this.col[r] . t.col[c]
@@ -239,7 +239,7 @@ public class Tensor {
 		if(rows != result.rows || t.cols != result.cols || result.depth != depth)
 			throw new IllegalArgumentException("Bad result dimension");
 		*/
-		for(int s=0; s<depth; s++) {
+		for(int s=0; s<slices; s++) {
 			for(int r=0; r<rows; r++) {
 				for(int c=0; c<t.cols; c++) {
 					// this.row[r] . t.col[c]
@@ -260,7 +260,7 @@ public class Tensor {
 	 * @return
 	 */
 	public Tensor copy() {
-		Tensor t = new Tensor(rows, cols, depth);
+		Tensor t = new Tensor(rows, cols, slices);
 		System.arraycopy(data, 0, t.data, 0, data.length);
 		return t;
 	}
@@ -283,7 +283,7 @@ public class Tensor {
 			return false;
 		Tensor t = (Tensor) o;
 		
-		if(t.rows != rows || t.cols != cols || t.depth != depth)
+		if(t.rows != rows || t.cols != cols || t.slices != slices)
 			return false;
 		
 		for(int i=0; i<data.length; i++)
@@ -348,10 +348,13 @@ public class Tensor {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		
-		for(int s=0; s<depth; s++) {
+		for(int s=0; s<slices; s++) {
+			if(s > 0)
+				sb.append("\n");
+			sb.append("Slice ");
+			sb.append(s);
 			for(int r=0; r<rows; r++) {
-				if(r > 0)
-					sb.append("\n");
+				sb.append("\n");
 				for(int c=0; c<cols; c++) {
 					sb.append(" ");
 					sb.append(String.format("%.3f", at(r,c,s)));

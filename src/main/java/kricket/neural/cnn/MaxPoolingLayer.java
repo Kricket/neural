@@ -26,7 +26,7 @@ public class MaxPoolingLayer implements Layer {
 	public Tensor feedForward(Tensor x) {
 		for(int r=0; r<lastY.rows; r++) for(int c=0; c<lastY.cols; c++) {
 			double max = Double.MIN_VALUE;
-			for(int i=0; i<x.depth; i++) {
+			for(int i=0; i<x.slices; i++) {
 				double d = x.at(r, c, i);
 				if(d > max) {
 					max = d;

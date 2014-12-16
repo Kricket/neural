@@ -26,7 +26,7 @@ public class TensorTest {
 		Tensor m = new Tensor(10, 20, 1);
 		assertEquals(10, m.rows);
 		assertEquals(20, m.cols);
-		assertEquals(1,  m.depth);
+		assertEquals(1,  m.slices);
 		assertEquals(200, m.data.length);
 	}
 	

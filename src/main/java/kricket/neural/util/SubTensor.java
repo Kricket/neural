@@ -36,9 +36,10 @@ public class SubTensor {
 	 * @return
 	 */
 	public double innerProduct(Tensor m, int mSlice) {
+		/*
 		if(m.rows != rows || m.cols != cols)
 			throw new IllegalArgumentException("Incompatible dimensions");
-		
+		*/
 		double sum = 0;
 		int mOff = m.index(0, 0, mSlice);
 		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
@@ -54,9 +55,10 @@ public class SubTensor {
 	 * @param d
 	 */
 	public void plusEqualsSliceTimes(Tensor t, int slice, double d) {
+		/*
 		if(rows != t.rows || cols != t.cols)
 			throw new IllegalArgumentException("Incompatible dimensions");
-		
+		*/
 		int tOff = t.index(0, 0, slice);
 		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
 			source.data[index(r,c)] += (t.data[tOff++] * d);
@@ -69,9 +71,10 @@ public class SubTensor {
 	 * @param d
 	 */
 	public void plusEqualsTimes(SubTensor t, double d) {
+		/*
 		if(rows != t.rows || cols != t.cols)
 			throw new IllegalArgumentException("Incompatible dimensions");
-		
+		*/
 		for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
 			source.data[index(r,c)] += (t.at(r,c) * d);
 		}

@@ -85,9 +85,9 @@ public class CNNPlayground {
 	public void simpleConv() throws IncompatibleLayerException {
 		MaxPoolingLayer mp1 = new MaxPoolingLayer(), mp2 = new MaxPoolingLayer();
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
-				new ConvolutionalLayer(4, 2, 2, 2, 2),
+				new ConvolutionalLayer(4, 3, 3, 2, 2).withMomentum(.7),
 				mp1,
-				new ConvolutionalLayer(4, 2, 2, 2, 2),
+				new ConvolutionalLayer(4, 2, 2, 1, 1).withMomentum(.5),
 				mp2,
 				new FlatteningLayer(),
 				new SigmaLayer(),
@@ -96,7 +96,7 @@ public class CNNPlayground {
 				new FullyConnectedLayer(10)
 		);
 		
-		cnn.SGD(trainingImages, 10, 5, 0.5, 1);
+		cnn.SGD(augment(trainingImages), 10, 5, 0.4, 1);
 		
 		totals(cnn);
 		

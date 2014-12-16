@@ -21,7 +21,7 @@ public class MaxPoolingLayerTest {
 		Tensor x = new Tensor(3,4,2);
 		Tensor forward = mp.feedForward(x);
 		
-		assertEquals(1, forward.depth);
+		assertEquals(1, forward.slices);
 		assertEquals(3, forward.rows);
 		assertEquals(4, forward.cols);
 	}
