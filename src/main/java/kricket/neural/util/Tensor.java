@@ -343,4 +343,22 @@ public class Tensor {
 	public SubTensor subMatrix(int startRow, int startCol, int slice, int rows, int cols) {
 		return new SubTensor(this, slice, startRow, startCol, rows, cols);
 	}
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		
+		for(int s=0; s<depth; s++) {
+			for(int r=0; r<rows; r++) {
+				if(r > 0)
+					sb.append("\n");
+				for(int c=0; c<cols; c++) {
+					sb.append(" ");
+					sb.append(String.format("%.3f", at(r,c,s)));
+				}
+			}
+		}
+		
+		return sb.toString();
+	}
 }

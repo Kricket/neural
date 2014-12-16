@@ -51,7 +51,7 @@ public class CNNPlayground {
 		System.out.println(cnn);
 	}
 	
-	@Test
+	//@Test
 	public void equivalentToNN() throws IncompatibleLayerException {
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
 				new FlatteningLayer(),
@@ -81,14 +81,17 @@ public class CNNPlayground {
 		return augmented;
 	}
 
-	//@Test
+	@Test
 	public void simpleConv() throws IncompatibleLayerException {
+		MaxPoolingLayer mp1 = new MaxPoolingLayer(), mp2 = new MaxPoolingLayer();
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
-				new ConvolutionalLayer(4, 3, 3, 2, 2),
-				new MaxPoolingLayer(),
+				new ConvolutionalLayer(4, 2, 2, 2, 2),
+				mp1,
+				new ConvolutionalLayer(4, 2, 2, 2, 2),
+				mp2,
 				new FlatteningLayer(),
 				new SigmaLayer(),
-				new FullyConnectedLayer(30, 0.5),
+				new FullyConnectedLayer(30),
 				new SigmaLayer(),
 				new FullyConnectedLayer(10)
 		);
@@ -96,17 +99,14 @@ public class CNNPlayground {
 		cnn.SGD(trainingImages, 10, 5, 0.5, 1);
 		
 		totals(cnn);
-		/*
+		
 		for(int i=0; i<5; i++) {
 			Image img = trainingImages.get(i);
 			System.out.println(img);
-			Tensor result = mpLayer.feedForward(new ConvolutionalLayer(8, 3, 3, 2, 2).feedForward(img.getDataTensor()));
-			for(int j=0; j<result.depth; j++) {
-				System.out.println("Map " + j);
-				System.out.print(result.draw(j));
-			}
+			cnn.feedForward(img.getDataTensor());
+			System.out.println(mp1.getLastOutput().draw(0));
+			System.out.println(mp2.getLastOutput().draw(0));
 		}
-		*/
 	}
 	
 	//@Test
@@ -138,8 +138,8 @@ public class CNNPlayground {
 		}
 		
 		for(Image i : testImages) {
-			totals[i.getAnswerAsByte()]++;
-			avg[i.getAnswerAsByte()].plusEquals(i.getData());
+			totals[i.getAnswerClass()]++;
+			avg[i.getAnswerClass()].plusEquals(i.getData());
 		}
 		
 		for(int i=0; i<avg.length; i++) {
@@ -147,7 +147,7 @@ public class CNNPlayground {
 		}
 		
 		for(Image i : testImages) {
-			byte idx = i.getAnswerAsByte();
+			int idx = i.getAnswerClass();
 			double dist = avg[idx].minus(i.getData()).norm();
 			if(dist < minDist[idx]) {
 				mins[idx] = i;
@@ -167,5 +167,25 @@ public class CNNPlayground {
 			System.out.println(maxs[i].getData().draw());
 			
 		}
+	}
+	
+	//@Test
+	public void preTrain() throws IncompatibleLayerException {
+		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
+				new FlatteningLayer(),
+				new FullyConnectedLayer(100),
+				new SigmaLayer(),
+				new FullyConnectedLayer(30),
+				new SigmaLayer(),
+				new FullyConnectedLayer(10));
+		/*
+		for(int i=0; i<3; i++) {
+			System.out.println("Pretraining " + i);
+			Collections.shuffle(trainingImages);
+			cnn.preTrain(trainingImages, 2, 0, 3);
+		}
+		*/
+		cnn.SGD(trainingImages, 10, 3, 0.5, 5);
+		totals(cnn);
 	}
 }

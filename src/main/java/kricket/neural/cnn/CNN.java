@@ -1,14 +1,20 @@
 package kricket.neural.cnn;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import kricket.neural.NNBase;
+import kricket.neural.nn.NN;
 import kricket.neural.util.Datum;
 import kricket.neural.util.Dimension;
 import kricket.neural.util.IncompatibleLayerException;
 import kricket.neural.util.NNOptions;
 import kricket.neural.util.Tensor;
 
+/**
+ * A rewrite of the {@link NN} class. This class takes a more object-oriented approach,
+ * allowing us to specify each layer independently.
+ */
 public class CNN extends NNBase {
 
 	/**
@@ -32,6 +38,14 @@ public class CNN extends NNBase {
 		this.layers[layers.length] = new SigmaLayer();
 		
 		prepare(inputDimension);
+	}
+	
+	/**
+	 * The layers of this network.
+	 * @return
+	 */
+	public Layer[] getLayers() {
+		return layers;
 	}
 	
 	/**
@@ -114,5 +128,79 @@ public class CNN extends NNBase {
 		double correct = numCorrect / data.size();
 		options.log.info(String.format("-------------------> Percent correct: %.3f", correct*100));
 		return correct;
+	}
+	
+	
+	/**
+	 * Experiment: attempt to pre-train the network. The idea here is:
+	 * <p>The output of a fully-connected layer is a vector in N-dimensional space.
+	 * What we want to do, is try to make it so that inputs of the same class are
+	 * close to each other, but inputs of different classes are far apart. To do this,
+	 * we simply "push" the output vectors together or apart, using the already-existing
+	 * backpropagation algorithm.
+	 * @param data
+	 * @param batchSize
+	 * @param regTerm
+	 * @param eta
+	 */
+	public void preTrain(List<? extends Datum> data, int batchSize, double regTerm, double eta) {
+		// Go up to the first fully-connected layer
+		List<Layer> preLayers = new ArrayList<>();
+		for(Layer l : layers) {
+			preLayers.add(l);
+			if(l instanceof FullyConnectedLayer)
+				break;
+		}
+		
+		eta = eta / batchSize;
+		for(int start=0; start<data.size(); start+=batchSize) {
+			List<? extends Datum> batch = data.subList(start, start+batchSize);
+			preTrain(preLayers, batch, regTerm, eta);
+		}
+	}
+	
+	private void preTrain(List<Layer> preLayers, List<? extends Datum> batch, double regTerm, double eta) {
+		for(Layer l : preLayers)
+			l.resetGradients();
+		
+		Datum d1 = batch.get(batch.size()-1);
+		Tensor y1 = forward(preLayers, d1.getDataTensor()).copy();
+		for(Datum d2 : batch) {
+			// First, get the vector from d1 -> d2
+			Tensor y2 = forward(preLayers, d2.getDataTensor()).copy();
+			Tensor diff = y2.minus(y1);
+			
+			if(d1.getAnswerClass() == d2.getAnswerClass())
+				// Pull them together
+				diff.timesEquals(-eta / diff.norm());
+			else
+				// Push them apart
+				diff.timesEquals(eta / diff.norm());
+			
+			// Then, backprop to "push" d2 in the desired direction
+			for(int i=preLayers.size()-1; i>=0; i--) {
+				diff = preLayers.get(i).backprop(diff);
+			}
+			
+			// Finally, setup for the next iteration.
+			d1 = d2;
+			y1 = y2;
+		}
+		
+		for(Layer l : preLayers)
+			l.applyGradients(regTerm, eta/batch.size());
+	}
+
+	/**
+	 * Feedforward, but only using the given layers.
+	 * @param preLayers
+	 * @param x
+	 * @return
+	 */
+	private Tensor forward(List<Layer> preLayers, Tensor x) {
+		for(Layer l : preLayers) {
+			x = l.feedForward(x);
+		}
+		return x;
 	}
 }

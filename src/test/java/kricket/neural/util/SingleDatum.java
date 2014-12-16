@@ -35,4 +35,9 @@ public class SingleDatum implements Datum {
 	public Tensor getAnswerTensor() {
 		return new Tensor(answer.data);
 	}
+
+	@Override
+	public int getAnswerClass() {
+		return (int) data.data[0];
+	}
 }

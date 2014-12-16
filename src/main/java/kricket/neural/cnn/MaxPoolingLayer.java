@@ -72,4 +72,15 @@ public class MaxPoolingLayer implements Layer {
 		return new Dimension(inputDimension.rows, inputDimension.columns, 1);
 	}
 
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + " (input depth: " + inputDepth + ")";
+	}
+	
+	/**
+	 * Get the last output that this layer generated.
+	 */
+	public Tensor getLastOutput() {
+		return lastY;
+	}
 }

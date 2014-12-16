@@ -10,33 +10,29 @@ public class Image implements Datum {
 	/**
 	 * 1 = black, 0 = white
 	 */
-	private Matrix data;
-	private byte answerByte;
-	private Matrix answer;
+	private Tensor data;
+	private int answerByte;
+	private Tensor answer;
 
-	public Image(double[] image, byte value) {
-		data = new Matrix(WIDTH, HEIGHT, image);
+	public Image(double[] image, int value) {
+		data = new Tensor(WIDTH, HEIGHT, 1, image);
 		answerByte = value;
-		answer = new Matrix(10,1);
-		answer.set(answerByte, 0, 1);
+		answer = new Tensor(10,1,1);
+		answer.set(answerByte, 0, 0, 1);
 	}
 	
 	public Matrix getData() {
-		return data;
+		return new Matrix(data.data);
 	}
 	
 	public Matrix getAnswer() {
-		return answer;
+		return new Matrix(answer.data);
 	}
 	
-	public byte getAnswerAsByte() {
-		return answerByte;
-	}
-
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(data.draw());
+		sb.append(data.draw(0));
 		
 		for(int i=0; i<answer.data.length; i++) {
 			sb.append((int) answer.data[i]);
@@ -52,11 +48,11 @@ public class Image implements Datum {
 		int x = (int) dx, y = (int) dy;
 		if(x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT)
 			return 0;
-		return data.at(y, x);
+		return data.at(y, x, 0);
 	}
 	
 	private void setPixel(int x, int y, double value) {
-		data.set(y, x, value);
+		data.set(y, x, 0, value);
 	}
 	
 	/**
@@ -117,11 +113,16 @@ public class Image implements Datum {
 
 	@Override
 	public Tensor getDataTensor() {
-		return new Tensor(data.rows, data.cols, 1, data.data);
+		return data;
 	}
 
 	@Override
 	public Tensor getAnswerTensor() {
-		return new Tensor(answer.rows, answer.cols, 1, answer.data);
+		return answer;
+	}
+
+	@Override
+	public int getAnswerClass() {
+		return answerByte;
 	}
 }

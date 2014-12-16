@@ -42,7 +42,7 @@ public abstract class NNBase {
 			
 			long startTime = System.currentTimeMillis();
 			
-			for(int start=0; start<=trainingSet.size()-batchSize; start+=batchSize) {
+			for(int start = 0; start < trainingSet.size(); start += batchSize) {
 				runBatch(trainingSet.subList(start, start+batchSize), regTerm, eta);
 			}
 			

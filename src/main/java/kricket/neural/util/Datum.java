@@ -15,4 +15,9 @@ public interface Datum {
 	 */
 	Matrix getAnswer();
 	Tensor getAnswerTensor();
+	/**
+	 * Get a short representation of the class of the answer.
+	 * @return
+	 */
+	int getAnswerClass();
 }

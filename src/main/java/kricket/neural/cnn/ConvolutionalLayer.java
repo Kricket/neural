@@ -125,6 +125,11 @@ public class ConvolutionalLayer implements Layer {
 		sb.append(skipRows);
 		sb.append(" cols=");
 		sb.append(skipCols);
+		sb.append(" ==> ");
+		sb.append(outputRows);
+		sb.append(" x ");
+		sb.append(outputCols);
+		sb.append(" output");
 		return sb.toString();
 	}
 
