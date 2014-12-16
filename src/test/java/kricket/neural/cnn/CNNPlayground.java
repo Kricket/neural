@@ -64,6 +64,25 @@ public class CNNPlayground {
 		totals(cnn);
 	}
 	
+	//@Test
+	public void reluTest() throws IncompatibleLayerException {
+		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
+				new FlatteningLayer(),
+				new FullyConnectedLayer(100),
+				new ReLULayer(),
+				new FullyConnectedLayer(50),
+				new ReLULayer(),
+				new FullyConnectedLayer(30),
+				new ReLULayer(),
+				new FullyConnectedLayer(30),
+				new ReLULayer(),
+				new FullyConnectedLayer(10));
+		cnn.SGD(trainingImages, 10, 3, 0.25, 5);
+		cnn.SGD(trainingImages, 10, 3, 0.15, 2.5);
+		
+		totals(cnn);
+	}
+	
 	public static List<Image> augment(List<Image> original) {
 		System.out.println("Augmenting images...");
 		List<Image> augmented = new ArrayList<>(original);
@@ -85,9 +104,9 @@ public class CNNPlayground {
 	public void simpleConv() throws IncompatibleLayerException {
 		MaxPoolingLayer mp1 = new MaxPoolingLayer(), mp2 = new MaxPoolingLayer();
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
-				new ConvolutionalLayer(4, 3, 3, 2, 2).withMomentum(.7),
+				new ConvolutionalLayer(8, 3, 3, 2, 2),
 				mp1,
-				new ConvolutionalLayer(4, 2, 2, 1, 1).withMomentum(.5),
+				new ConvolutionalLayer(8, 2, 2, 1, 1),
 				mp2,
 				new FlatteningLayer(),
 				new SigmaLayer(),
@@ -96,7 +115,7 @@ public class CNNPlayground {
 				new FullyConnectedLayer(10)
 		);
 		
-		cnn.SGD(augment(trainingImages), 10, 5, 0.4, 1);
+		cnn.SGD(trainingImages, 10, 5, 0.4, 1);
 		
 		totals(cnn);
 		
