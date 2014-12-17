@@ -43,4 +43,8 @@ public class NNOptions {
 	 * Whether to log the neurons that were dropped out.
 	 */
 	public boolean logDropout = true;
+	/**
+	 * Whether to log the dimensions of the data passed between layers when a network is created.
+	 */
+	public boolean logDimensions = true;
 }

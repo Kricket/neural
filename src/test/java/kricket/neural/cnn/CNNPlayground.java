@@ -104,25 +104,28 @@ public class CNNPlayground {
 	public void simpleConv() throws IncompatibleLayerException {
 		MaxPoolingLayer mp1 = new MaxPoolingLayer();
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
-				new ConvolutionalLayer(5, 3, 3, 2, 2).withMomentum(0.6),
-				new ConvolutionalLayer(5, 3, 3, 1, 1).withMomentum(0.4),
-				mp1,
+				new ConvolutionalLayer(6, 5, 5, 2, 2),
+				new ReLULayer(),
+				new ConvolutionalLayer(6, 2, 2, 2, 2),
+				new SigmaLayer(),
+				new ConvolutionalLayer(16, 4, 4, 2, 2),
 				new FlatteningLayer(),
 				new FullyConnectedLayer(30),
 				new SigmaLayer(),
 				new FullyConnectedLayer(10)
 		);
 		
-		cnn.SGD(trainingImages, 10, 5, 0.4, 1);
+		cnn.SGD(trainingImages, 20, 3, 0.25, 0);
 		
 		totals(cnn);
-		
+		/*
 		for(int i=0; i<5; i++) {
 			Image img = trainingImages.get(i);
 			System.out.println(img);
 			cnn.feedForward(img.getDataTensor());
 			System.out.println(mp1.getLastOutput().draw(0));
 		}
+		*/
 	}
 	
 	//@Test

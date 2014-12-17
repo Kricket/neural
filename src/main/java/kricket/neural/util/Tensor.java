@@ -358,9 +358,10 @@ public class Tensor {
 	 * @param d
 	 */
 	public void plusEqualsTimes(SubTensor xs, double d) {
+		/*
 		if(rows != xs.rows || cols != xs.cols || slices != xs.slices)
 			throw new IllegalArgumentException("Illegal dimensions");
-		
+		*/
 		for(int s=0; s<slices; s++) for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
 			data[index(r, c, s)] += xs.at(r, c, s) * d;
 		}

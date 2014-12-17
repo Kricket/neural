@@ -212,5 +212,13 @@ public class ConvolutionalLayer implements Layer {
 				subBack.plusEqualsTimes(fakeKernel, 1);
 			}
 		}
+		
+		// One last little check: depending on the configuration, some pixels may never be used!
+		// This would leave us with zero entries...which will cause NaNs to appear.
+		// The solution here is to set those entries to 1 (the backpropagated value will be 0 anyway).
+		for(int i=0; i<backAdjust.data.length; i++) {
+			if(backAdjust.data[i] == 0)
+				backAdjust.data[i] = 1;
+		}
 	}
 }

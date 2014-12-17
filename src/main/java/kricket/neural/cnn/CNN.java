@@ -54,8 +54,12 @@ public class CNN extends NNBase {
 	 * @throws IncompatibleLayerException
 	 */
 	private void prepare(Dimension inputDimension) throws IncompatibleLayerException {
+		if(options.logDimensions)
+			options.log.info("Input: " + inputDimension);
 		for(Layer layer : layers) {
 			inputDimension = layer.prepare(inputDimension);
+			if(options.logDimensions)
+				options.log.info(layer.getClass().getSimpleName() + " => " + inputDimension);
 		}
 	}
 	
