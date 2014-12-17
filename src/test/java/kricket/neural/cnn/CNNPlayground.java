@@ -102,14 +102,12 @@ public class CNNPlayground {
 
 	@Test
 	public void simpleConv() throws IncompatibleLayerException {
-		MaxPoolingLayer mp1 = new MaxPoolingLayer(), mp2 = new MaxPoolingLayer();
+		MaxPoolingLayer mp1 = new MaxPoolingLayer();
 		CNN cnn = new CNN(getOpts(), new Dimension(Image.HEIGHT, Image.WIDTH, 1),
-				new ConvolutionalLayer(8, 3, 3, 2, 2),
+				new ConvolutionalLayer(5, 3, 3, 2, 2).withMomentum(0.6),
+				new ConvolutionalLayer(5, 3, 3, 1, 1).withMomentum(0.4),
 				mp1,
-				new ConvolutionalLayer(8, 2, 2, 1, 1),
-				mp2,
 				new FlatteningLayer(),
-				new SigmaLayer(),
 				new FullyConnectedLayer(30),
 				new SigmaLayer(),
 				new FullyConnectedLayer(10)
@@ -124,7 +122,6 @@ public class CNNPlayground {
 			System.out.println(img);
 			cnn.feedForward(img.getDataTensor());
 			System.out.println(mp1.getLastOutput().draw(0));
-			System.out.println(mp2.getLastOutput().draw(0));
 		}
 	}
 	

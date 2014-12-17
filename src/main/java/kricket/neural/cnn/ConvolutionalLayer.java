@@ -6,22 +6,22 @@ import kricket.neural.util.SubTensor;
 import kricket.neural.util.Tensor;
 
 /**
- * A convolutional layer is composed of one or more kernels. Each kernel is a small, rectangular
- * pattern that acts like a single neuron of a fully-connected layer, but is applied repeatedly
- * for a single input feature map.
+ * A convolutional layer is composed of one or more kernels. Each kernel is a cube of size
+ * (kr, kc, i), where i = the number of input maps. Each kernel is repeated across all
+ * valid regions of the input maps. It acts like a fully-connected layer: it has weights
+ * for each input it encounters, plus a bias.
  */
 public class ConvolutionalLayer implements Layer {
 	
-	private final Tensor kernels, biases;
-	private final int stepX, stepY;
-	private Tensor lastX, lastY;
-	private Tensor dK, dB, oldDK, oldDB;
+	private Tensor[] kernels, dK, oldDK;
+	private final int stepX, stepY, kernelRows, kernelCols, numKernels;
+	private Tensor lastX, lastY, biases;
+	private Tensor dB, oldDB;
 	private int outputRows, outputCols;
 	private Tensor backAdjust;
 	private double momentum;
 	
 	/**
-	 * 
 	 * @param numKernels The number of kernels to use.
 	 * @param kernelWidth The width of each kernel.
 	 * @param kernelHeight The height of each kernel.
@@ -29,8 +29,9 @@ public class ConvolutionalLayer implements Layer {
 	 * @param rowStep The number of rows to skip when applying the kernels.
 	 */
 	public ConvolutionalLayer(int numKernels, int kernelWidth, int kernelHeight, int colStep, int rowStep) {
-		kernels = Tensor.random(kernelHeight, kernelWidth, numKernels);
-		biases = Tensor.random(numKernels, 1, 1);
+		this.numKernels = numKernels;
+		kernelRows = kernelHeight;
+		kernelCols = kernelWidth;
 		stepX = colStep;
 		stepY = rowStep;
 	}
@@ -66,17 +67,17 @@ public class ConvolutionalLayer implements Layer {
 		lastX = x;
 		
 		// Each kernel is basically like the weights of a single neuron of a fully-connected layer.
-		// We iterate over the input maps, and apply the kernels (weights) to the sub-maps, + biases,
-		// to get the output pixel value.
-		int ySlice = 0;
-		for(int s=0; s<x.slices; s++) {
-			for(int k=0; k<kernels.slices; k++) {
-				for(int r=0; r<outputRows; r++) for(int c=0; c<outputCols; c++) {
-					SubTensor subMatrix = x.subMatrix(r*stepY, c*stepX, s, kernels.rows, kernels.cols);
-					double weighted = subMatrix.innerProduct(kernels, k);
-					lastY.set(r, c, ySlice, weighted + biases.data[k]);
+		// The output of a single kernel will fill one slice of the output layer.
+		// We iterate over the kernels (weights) and apply them to the input maps, + biases, to get
+		// the output pixel value.
+		
+		for(int k=0; k<numKernels; k++) {
+			for(int r = 0, or = 0; r <= x.rows - kernelRows; r += stepY, or++) {
+				for(int c = 0, oc = 0; c <= x.cols - kernelCols; c += stepX, oc++) {
+					SubTensor xs = new SubTensor(x, r, c, 0, kernelRows, kernelCols, x.slices);
+					double pixel = xs.innerProduct(kernels[k]) + biases.data[k];
+					lastY.set(or, oc, k, pixel);
 				}
-				ySlice++;
 			}
 		}
 		
@@ -86,28 +87,19 @@ public class ConvolutionalLayer implements Layer {
 	@Override
 	public Tensor backprop(Tensor deltas) {
 		// The idea here is: since each kernel is basically like a single fully-connected neuron,
-		// we simply repeat the feedforward loops to pair up the kernels with the sub-images
+		// we simply repeat the feedforward loops to pair up the kernels with the sub-regions
 		// where they are applied. The backpropagated deltas are the kernels, and the dKs are
-		// the original sub-matrices.
+		// the original input SubTensors.
 		Tensor back = new Tensor(lastX.rows, lastX.cols, lastX.slices);
-		for(int s=0; s<lastX.slices; s++) {
-			for(int r=0; r<deltas.rows; r++) for(int c=0; c<deltas.cols; c++) {
-				// deltas[r,c,deltaSlice] = the error of kernel[k] when applied to x[s] at (r*skip, c*skip)
-				
-				SubTensor subX = lastX.subMatrix(r*stepY, c*stepX, s, kernels.rows, kernels.cols);
-				SubTensor subBack = back.subMatrix(r*stepY, c*stepX, s, kernels.rows, kernels.cols);
-				
-				for(int k=0; k<kernels.slices; k++) {
-					int deltaSlice = s*lastX.slices + k;
-					double delta = deltas.at(r, c, deltaSlice);
-					dB.data[k] += delta;
-					
-					// dX/dK = K
-					subBack.plusEqualsSliceTimes(kernels, k, delta);
-					
-					// dK/dX = X
-					dK.subMatrix(0, 0, k, dK.rows, dK.cols).plusEqualsTimes(subX, delta);
-				}
+		
+		for(int r=0; r<deltas.rows; r++) for(int c=0; c<deltas.cols; c++) {
+			SubTensor xs = new SubTensor(lastX, r*stepY, c*stepX, 0, kernelRows, kernelCols, lastX.slices);
+			SubTensor bs = new SubTensor(back, r*stepY, c*stepX, 0, kernelRows, kernelCols, back.slices);
+			for(int k=0; k<numKernels; k++) {
+				// deltas[r,c,k] = the delta for kernel k applied at x[r*step, c*step]
+				double delta = deltas.at(r, c, k);
+				dK[k].plusEqualsTimes(xs, delta);
+				bs.plusEqualsTimes(kernels[k], delta);
 			}
 		}
 		
@@ -115,6 +107,7 @@ public class ConvolutionalLayer implements Layer {
 		for(int i=0; i<back.data.length; i++) {
 			back.data[i] /= backAdjust.data[i];
 		}
+		
 		return back;
 	}
 
@@ -123,32 +116,39 @@ public class ConvolutionalLayer implements Layer {
 		// Since each kernel was repeated r*c times, we have to reduce the gradients by that much
 		scale = -scale / (outputRows * outputCols);
 		biases.plusEquals(dB.timesEquals(scale));
-		
-		if(regTerm != 0)
-			kernels.timesEquals(regTerm);
-		kernels.plusEquals(dK.timesEquals(scale));
-		
-		kernels.plusEquals(oldDK);
 		biases.plusEquals(oldDB);
+		
+		for(int k=0; k<numKernels; k++) {
+			if(regTerm != 0)
+				kernels[k].timesEquals(regTerm);
+			kernels[k].plusEquals(dK[k].timesEquals(scale));
+			
+			kernels[k].plusEquals(oldDK[k]);
+		}
 	}
 
 	@Override
 	public void resetGradients() {
-		oldDK = dK.timesEquals(momentum);
+		for(int i=0; i<numKernels; i++) {
+			oldDK[i] = dK[i].timesEquals(momentum);
+			dK[i] = new Tensor(kernelRows, kernelCols, kernels[i].slices);
+		}
 		oldDB = dB.timesEquals(momentum);
 		dB = new Tensor(biases.rows, biases.cols, 1);
-		dK = new Tensor(kernels.rows, kernels.cols, kernels.slices);
 	}
 	
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(getClass().getSimpleName());
 		sb.append("\n");
-		for(int k=0; k<kernels.slices; k++) {
+		for(int k=0; k<numKernels; k++) {
 			sb.append("Kernel ");
 			sb.append(k);
 			sb.append("\n");
-			sb.append(kernels.draw(k));
+			for(int s=0; s<kernels[k].slices; s++) {
+				sb.append(kernels[k].draw(s));
+				sb.append("\n");
+			}
 		}
 		sb.append("skip rows=");
 		sb.append(stepY);
@@ -164,18 +164,25 @@ public class ConvolutionalLayer implements Layer {
 
 	@Override
 	public Dimension prepare(Dimension inputDimension) throws IncompatibleLayerException {
-		outputRows = (inputDimension.rows - kernels.rows) / stepY + 1;
+		outputRows = (inputDimension.rows - kernelRows) / stepY + 1;
 		if(outputRows < 1)
 			throw new IncompatibleLayerException("Given " + inputDimension + ", we would have " + outputRows + " output rows!");
 		
-		outputCols = (inputDimension.columns - kernels.cols) / stepX + 1;
+		outputCols = (inputDimension.columns - kernelCols) / stepX + 1;
 		if(outputCols < 1)
 			throw new IncompatibleLayerException("Given " + inputDimension + ", we would have " + outputCols + " output columns!");
 		
+		kernels = new Tensor[numKernels];
+		dK = new Tensor[numKernels];
+		oldDK = new Tensor[numKernels];
+		for(int i=0; i<numKernels; i++) {
+			kernels[i] = Tensor.random(kernelRows, kernelCols, inputDimension.depth);
+			dK[i] = new Tensor(kernelRows, kernelCols, inputDimension.depth);
+		}
+		biases = Tensor.random(numKernels, 1, 1);
 		dB = new Tensor(biases.rows, biases.cols, 1);
-		dK = new Tensor(kernels.rows, kernels.cols, kernels.slices);
 		
-		lastY = new Tensor(outputRows, outputCols, inputDimension.depth * kernels.slices);
+		lastY = new Tensor(outputRows, outputCols, numKernels);
 		setupBackAdjust(inputDimension);
 		
 		return lastY.getDimension();
@@ -195,22 +202,15 @@ public class ConvolutionalLayer implements Layer {
 	 */
 	private void setupBackAdjust(Dimension inputDimension) {
 		backAdjust = new Tensor(inputDimension);
-		Tensor fakeKernel = new Tensor(kernels.rows, kernels.cols, 1);
+		Tensor fakeKernel = new Tensor(kernelRows, kernelCols, inputDimension.depth);
 		for(int i=0; i<fakeKernel.data.length; i++)
 			fakeKernel.data[i] = 1;
 		
-		// For starters, just do the first slice...
-		for(int r=0; r<=inputDimension.rows-kernels.rows; r+=stepY) {
-			for(int c=0; c<=inputDimension.columns-kernels.cols; c+=stepX) {
-				SubTensor subBack = backAdjust.subMatrix(r, c, 0, kernels.rows, kernels.cols);
-				subBack.plusEqualsSliceTimes(fakeKernel, 0, 1);
+		for(int r=0; r<=inputDimension.rows-kernelRows; r+=stepY) {
+			for(int c=0; c<=inputDimension.columns-kernelCols; c+=stepX) {
+				SubTensor subBack = new SubTensor(backAdjust, r, c, 0, kernelRows, kernelCols, inputDimension.depth);
+				subBack.plusEqualsTimes(fakeKernel, 1);
 			}
-		}
-		
-		// ...then, copy it to all the other slices.
-		for(int d=0; d<backAdjust.slices; d++) {
-			int idx = backAdjust.index(0, 0, d);
-			System.arraycopy(backAdjust.data, 0, backAdjust.data, idx, backAdjust.rows*backAdjust.cols);
 		}
 	}
 }

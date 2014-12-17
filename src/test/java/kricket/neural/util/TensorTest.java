@@ -205,23 +205,6 @@ public class TensorTest {
 	}
 	*/
 	
-	/*
-	@Test
-	public void subTensorDot() {
-		Tensor id2 = id(2), id5 = id(5);
-		for(int r=0; r<3; r++) for(int c = 0; c<3; c++) {
-			Tensor subTensor = id5.subTensor(r, c, 2, 2);
-			assertEquals("SubTensor at row " + r + ", col " + c,
-					(r == c ? 2 : 0),
-					subTensor.dot(id2),
-					TOLERANCE);
-			assertEquals("SubTensor at row " + r + ", col " + c,
-					(r == c ? 2 : 0),
-					id2.dot(subTensor),
-					TOLERANCE);
-		}
-	}
-	*/
 	@Test
 	public void norm() {
 		for(int i=1; i<10; i++) {
@@ -231,80 +214,59 @@ public class TensorTest {
 	}
 	
 	@Test
-	public void subTensorInnerProduct() {
-		Tensor t = new Tensor(3,3,2, new double[]{
-				1,2,3,
-				4,5,6,
-				7,8,9,
+	public void subTensor_innerProduct() {
+		Tensor t = new Tensor(3, 3, 2, new double[]{
+				1, 2, 3,
+				4, 5, 6,
+				7, 8, 9,
 				
-				9,8,7,
-				6,5,4,
-				3,2,1
+				9, 8, 7,
+				6, 5, 4,
+				3, 2, 1
 		});
 		
-		Tensor u = new Tensor(2,2,2, new double[]{
-				1,0,
-				0,1,
+		Tensor id2 = id(2);
+		
+		double d = new SubTensor(t, 0, 0, 0, 2, 2, 1).innerProduct(id2);
+		assertEquals(6, d, TOLERANCE);
+		
+		d = new SubTensor(t, 1, 1, 1, 2, 2, 1).innerProduct(id2);
+		assertEquals(6, d, TOLERANCE);
+		
+		Tensor id22 = new Tensor(2, 2, 2, new double[] {
+				1, 0,
+				0, 1,
 				
-				0,1,
-				1,0
+				1, 0,
+				0, 1
 		});
 		
-		assertEquals(6, t.subMatrix(1, 1, 1, 2, 2).innerProduct(u, 0), TOLERANCE);
-		assertEquals(6, t.subMatrix(1, 1, 1, 2, 2).innerProduct(u, 1), TOLERANCE);
-		assertEquals(8, t.subMatrix(0, 1, 0, 2, 2).innerProduct(u, 0), TOLERANCE);
-		assertEquals(8, t.subMatrix(0, 1, 0, 2, 2).innerProduct(u, 1), TOLERANCE);
-	}
-	
-	@Test
-	public void subTensorPlusEqualsSliceTimes() {
-		Tensor t = new Tensor(3,3,2, new double[]{
-				1,2,3,
-				4,5,6,
-				7,8,9,
-				
-				9,8,7,
-				6,5,4,
-				3,2,1
-		});
-		
-		SubTensor subMatrix = t.subMatrix(1, 1, 1, 2, 2);
-		subMatrix.plusEqualsSliceTimes(id(2), 0, 8);
-		
-		for(int r=0; r<3; r++) for(int c=0; c<3; c++)
-			assertEquals(r*3+c+1, t.at(r, c, 0), TOLERANCE);
-		
-		for(int r=0; r<3; r++) {
-			assertEquals(9-r, t.at(0, r, 1), TOLERANCE);
-			assertEquals(9-3*r, t.at(r, 0, 1), TOLERANCE);
+		for(int r=0; r<2; r++) for(int c=0; c<2; c++) {
+			d = new SubTensor(t, r, c, 0, 2, 2, 2).innerProduct(id22);
+			assertEquals("SubTensor at " + r + ", " + c, 20, d, TOLERANCE);
 		}
-		
-		assertEquals(4, t.at(1, 2, 1), TOLERANCE);
-		assertEquals(2, t.at(2, 1, 1), TOLERANCE);
-		assertEquals(13, t.at(1, 1, 1), TOLERANCE);
-		assertEquals(9, t.at(2, 2, 1), TOLERANCE);
 	}
 	
 	@Test
-	public void subTensorPlusEqualsTimes() {
-		Tensor t = new Tensor(3,3,2, new double[]{
-				1,2,3,
-				4,5,6,
-				7,8,9,
+	public void subTensor_plusEqualsTimes() {
+		Tensor t = new Tensor(3, 3, 2, new double[]{
+				1, 1, 1,
+				1, 1, 1,
+				1, 1, 1,
 				
-				9,8,7,
-				6,5,4,
-				3,2,1
+				1, 1, 1,
+				1, 1, 1,
+				1, 1, 1
 		});
+		Tensor id3 = id(3);
 		
-		SubTensor a = t.subMatrix(0, 0, 0, 2, 2),
-				b = t.subMatrix(1, 1, 1, 2, 2);
-		
-		b.plusEqualsTimes(a, 3);
-		
-		assertEquals(8,  t.at(1, 1, 1), TOLERANCE);
-		assertEquals(10, t.at(1, 2, 1), TOLERANCE);
-		assertEquals(14, t.at(2, 1, 1), TOLERANCE);
-		assertEquals(16, t.at(2, 2, 1), TOLERANCE);
+		new SubTensor(t, 0, 0, 0, 3, 3, 1).plusEqualsTimes(id3, -1);
+		new SubTensor(t, 0, 0, 1, 3, 3, 1).plusEqualsTimes(id3, -1);
+		for(int s=0; s<2; s++) for(int r=0; r<3; r++) for(int c=0; c<3; c++) {
+			assertEquals("row " + r + " col " + c + " slice " + s,
+					(r == c ? 0 : 1),
+					t.at(r, c, s),
+					TOLERANCE);
+		}
 	}
 }

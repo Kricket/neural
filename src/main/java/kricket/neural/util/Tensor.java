@@ -331,19 +331,6 @@ public class Tensor {
 		return sb.toString();
 	}
 	
-	/**
-	 * Get a sub-matrix of this tensor: a rectangular part of a single slice.
-	 * @param startRow
-	 * @param startCol
-	 * @param slice
-	 * @param rows
-	 * @param cols
-	 * @return
-	 */
-	public SubTensor subMatrix(int startRow, int startCol, int slice, int rows, int cols) {
-		return new SubTensor(this, slice, startRow, startCol, rows, cols);
-	}
-	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -363,5 +350,19 @@ public class Tensor {
 		}
 		
 		return sb.toString();
+	}
+
+	/**
+	 * Set this = this + (xs*d)
+	 * @param xs
+	 * @param d
+	 */
+	public void plusEqualsTimes(SubTensor xs, double d) {
+		if(rows != xs.rows || cols != xs.cols || slices != xs.slices)
+			throw new IllegalArgumentException("Illegal dimensions");
+		
+		for(int s=0; s<slices; s++) for(int r=0; r<rows; r++) for(int c=0; c<cols; c++) {
+			data[index(r, c, s)] += xs.at(r, c, s) * d;
+		}
 	}
 }
