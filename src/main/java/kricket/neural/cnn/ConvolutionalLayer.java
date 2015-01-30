@@ -98,6 +98,7 @@ public class ConvolutionalLayer implements Layer {
 			for(int k=0; k<numKernels; k++) {
 				// deltas[r,c,k] = the delta for kernel k applied at x[r*step, c*step]
 				double delta = deltas.at(r, c, k);
+				dB.data[k] += delta;
 				dK[k].plusEqualsTimes(xs, delta);
 				bs.plusEqualsTimes(kernels[k], delta);
 			}
